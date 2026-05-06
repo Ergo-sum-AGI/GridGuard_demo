@@ -409,6 +409,7 @@ let currentScenario = 'spain';
 let scenarioData = [...SCENARIOS.spain.data];
 let freqHistory = [];
 let currentStep = 0;
+let blackoutStep = 0;   // index where freq first collapses below 5 Hz
 let playing = false;
 let speed = 1;
 let tickTimer = null;
@@ -469,10 +470,18 @@ function updateAll() {
   }
   
   const freq = scenarioData[currentStep];
+
+  // Once freq collapses to near zero, freeze display and trigger blackout
+  if (freq < 5) {
+    triggerBlackout();
+    return;
+  }
+
   freqHistory.push(freq);
   if (freqHistory.length > 40) freqHistory.shift();
   
   const result = analyzeFrequency(freqHistory);
+  window._lastResult = result; // always save last valid result
   const nominal = SCENARIOS[currentScenario].nominal;
   const deviation = ((freq - nominal) * 1000).toFixed(0);
   
@@ -491,16 +500,21 @@ function updateAll() {
   badge.className = `risk-badge risk-${result.level.toLowerCase()}`;
   badge.textContent = result.level;
   
-  // Countdown
+  // Countdown — show actual seconds remaining to blackout in this scenario
   const predEl = document.getElementById('predCountdown');
   if (result.level === 'NORMAL') {
-    predEl.textContent = '60:00';
+    predEl.textContent = 'STABLE';
     predEl.style.color = '#4a6a8a';
-    document.getElementById('predSub').textContent = 'Grid is stable';
+    document.getElementById('predSub').textContent = 'Grid is stable. No imminent risk.';
   } else {
-    predEl.textContent = `${result.horizon.toString().padStart(2,'0')}:00`;
+    const remainSec = Math.max(0, (blackoutStep - currentStep) * 5);
+    const rm = Math.floor(remainSec / 60);
+    const rs = remainSec % 60;
+    const label = `${rm.toString().padStart(2,'0')}:${rs.toString().padStart(2,'0')}`;
+    predEl.textContent = label;
     predEl.style.color = colorMap[result.level];
-    document.getElementById('predSub').textContent = `Blackout risk in ${result.horizon} minutes`;
+    const urgency = { ELEVATED: 'Instability detected', HIGH: 'Cascade risk rising', SEVERE: 'Blackout risk — act now', CRITICAL: 'COLLAPSE IMMINENT' };
+    document.getElementById('predSub').textContent = `${urgency[result.level] || ''} — ${rm > 0 ? rm + ' min ' : ''}${rs} sec to blackout`;
   }
   
   // Metrics
@@ -535,10 +549,7 @@ function updateAll() {
     window._lastLevel = result.level;
   }
   
-  // Check blackout
-  if (freq < 48 || (freq < 49 && result.level === 'CRITICAL')) {
-    triggerBlackout();
-  }
+  // Blackout triggered above when freq < 5; nothing more needed here
 }
 
 function triggerBlackout() {
@@ -647,6 +658,10 @@ function loadScenario(key) {
   window._lastLevel = null;
   window._blackoutTriggered = false;
   
+  // Pre-compute the step index where frequency collapses
+  blackoutStep = scenarioData.findIndex(f => f < 5);
+  if (blackoutStep < 0) blackoutStep = scenarioData.length - 1;
+
   document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
   document.getElementById(`btn-${key}`).classList.add('active');
   document.getElementById('scenarioLabel').textContent = SCENARIOS[key].name;
@@ -712,6 +727,8 @@ function loadCustomData(values) {
   const nominal = scenarioData[0] > 55 ? 60 : 50;
   document.getElementById('nominalInfo').textContent = `Custom: ${scenarioData.length} points | Nominal ~${nominal} Hz`;
   document.getElementById('scenarioLabel').textContent = 'CUSTOM DATA';
+  blackoutStep = scenarioData.findIndex(f => f < 5);
+  if (blackoutStep < 0) blackoutStep = scenarioData.length - 1;
   currentStep = 0;
   addLog(`📤 Loaded ${scenarioData.length} custom data points`, 'info');
   document.getElementById('csvStatus').textContent = `✅ Loaded ${scenarioData.length} values`;
