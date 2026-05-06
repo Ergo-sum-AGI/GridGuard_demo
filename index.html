@@ -3,800 +3,423 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GridGuard™ — Blackout Prevention AI</title>
+<title>GridGuard™ — Blackout Prevention AI Demo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg:       #04090f;
-  --s1:       #081525;
-  --s2:       #0c1f38;
-  --s3:       #0f2848;
-  --border:   #1a3a5c;
-  --text:     #c0d4ec;
-  --dim:      #4a6a8a;
-  --accent:   #00aaff;
-  --safe:     #00dd66;
-  --warn:     #ffc800;
-  --high:     #ff8800;
-  --danger:   #ff3300;
-  --crit:     #dd0000;
-  --mono:     'Courier New', monospace;
-  --ui:       'Trebuchet MS', 'Arial Narrow', sans-serif;
+  --bg: #04090f;
+  --s1: #081525;
+  --s2: #0c1f38;
+  --s3: #0f2848;
+  --border: #1a3a5c;
+  --text: #c0d4ec;
+  --dim: #4a6a8a;
+  --accent: #00aaff;
+  --safe: #00dd66;
+  --warn: #ffc800;
+  --high: #ff8800;
+  --danger: #ff3300;
+  --crit: #dd0000;
+  --mono: 'Courier New', monospace;
+  --ui: 'Trebuchet MS', 'Arial Narrow', sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:var(--ui);background:var(--bg);color:var(--text);overflow-x:hidden}
-a{color:var(--accent)}
+body{font-family:var(--ui);background:var(--bg);color:var(--text);overflow-x:hidden}
 
-/* ── ALERT OVERLAY ── */
-#alertBanner{
-  display:none;position:fixed;top:0;left:0;right:0;z-index:100;
-  padding:10px 20px;font-weight:bold;font-size:1.05em;
-  display:flex;align-items:center;gap:14px;
-  border-bottom:2px solid transparent;
-  transition:background .4s,border-color .4s;
+/* Demo disclaimer */
+.disclaimer{
+  background:#1a1200;border-bottom:1px solid #664400;padding:8px 20px;
+  text-align:center;font-size:.8em;color:#ffaa44;position:sticky;top:0;z-index:99;
 }
-#alertBanner.elevated{display:flex;background:#201800;border-color:var(--warn);color:var(--warn)}
-#alertBanner.high{display:flex;background:#1a0c00;border-color:var(--high);color:var(--high);animation:flashAmber 1.4s infinite}
-#alertBanner.severe{display:flex;background:#1a0000;border-color:var(--danger);color:var(--danger);animation:flashRed 1s infinite}
-#alertBanner.critical{display:flex;background:#200000;border-color:var(--crit);color:#ff6666;animation:flashRed .6s infinite}
-#alertBanner.blackout{display:flex;background:#000;border-color:#333;color:#555;animation:none}
-@keyframes flashAmber{0%,100%{opacity:1}50%{opacity:.55}}
-@keyframes flashRed{0%,100%{opacity:1}50%{opacity:.4}}
-#alertIcon{font-size:1.6em;flex-shrink:0}
-#alertMain{flex:1}
-#alertTitle{font-size:1.15em;letter-spacing:.04em}
-#alertSub{font-size:.85em;opacity:.85;margin-top:2px}
-#alertCountdown{
-  font-family:var(--mono);font-size:2em;font-weight:900;
-  background:rgba(255,255,255,.07);padding:4px 16px;border-radius:6px;
-  min-width:110px;text-align:center;letter-spacing:.06em;flex-shrink:0
-}
-#alertAction{
-  font-size:.8em;background:rgba(255,255,255,.08);padding:6px 12px;
-  border-radius:6px;max-width:260px;border-left:3px solid;flex-shrink:0
-}
+.disclaimer a{color:#ffcc00;text-decoration:underline}
 
-/* ── HEADER ── */
-#topbar{
+/* Header */
+.header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:12px 24px;background:var(--s1);
-  border-bottom:1px solid var(--border);
-  margin-top:0;transition:margin-top .3s;
+  padding:12px 24px;background:var(--s1);border-bottom:1px solid var(--border);
 }
-.logo{font-size:1.5em;font-weight:900;color:#fff;letter-spacing:-.02em}
+.logo{font-size:1.5em;font-weight:900;color:#fff}
 .logo span{color:var(--accent)}
-.logo sub{font-size:.45em;color:var(--dim);font-weight:400;letter-spacing:.08em}
-#scenarioLabel{font-size:.9em;color:var(--accent);font-weight:600;text-align:center;
-  max-width:400px;padding:4px 12px;background:rgba(0,170,255,.08);border-radius:4px;border:1px solid rgba(0,170,255,.2)}
-#topClock{font-family:var(--mono);font-size:1em;color:var(--dim);text-align:right}
-#topClock span{color:var(--text);font-size:1.15em;font-weight:600}
+.logo sub{font-size:.45em;color:var(--dim)}
+.scenario-badge{font-size:.8em;color:var(--accent);background:rgba(0,170,255,.1);padding:4px 12px;border-radius:20px}
+.clock{font-family:var(--mono);font-size:.9em;color:var(--dim);text-align:right}
 
-/* ── MAIN LAYOUT ── */
-#main{
+/* Main grid */
+.main-grid{
   display:grid;
-  grid-template-columns:290px 1fr 310px;
+  grid-template-columns:280px 1fr 300px;
   gap:12px;
-  padding:14px 14px 0 14px;
-  min-height:calc(100vh - 48px - 42px);
+  padding:14px;
+  min-height:calc(100vh - 60px);
 }
 
-/* ── PANELS ── */
-.panel{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px;overflow:hidden}
-.phead{font-size:.72em;font-weight:700;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;
-  margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
-
-/* ── LEFT PANEL ── */
-#leftCol{display:flex;flex-direction:column;gap:10px}
+/* Panels */
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px}
+.panel-title{font-size:.7em;font-weight:700;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border)}
 
 /* Scenario buttons */
-.sc-btn{
-  display:block;width:100%;text-align:left;padding:9px 11px;
-  background:var(--s2);border:1px solid var(--border);border-radius:6px;
-  color:var(--text);cursor:pointer;transition:all .2s;margin-bottom:6px;
+.scenario-btn{
+  width:100%;text-align:left;padding:10px;background:var(--s2);
+  border:1px solid var(--border);border-radius:6px;color:var(--text);
+  cursor:pointer;margin-bottom:8px;transition:all .2s;
 }
-.sc-btn:last-child{margin-bottom:0}
-.sc-btn:hover{border-color:var(--accent);background:var(--s3)}
-.sc-btn.active{border-color:var(--accent);background:rgba(0,170,255,.1);color:#fff}
-.sc-btn .sc-name{font-weight:700;font-size:.88em;color:#fff}
-.sc-btn .sc-date{font-size:.72em;color:var(--dim);margin-top:1px}
-.sc-btn .sc-tag{
-  display:inline-block;font-size:.65em;padding:1px 7px;border-radius:3px;margin-top:4px;
-  font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-}
-.sc-btn.active .sc-name{color:var(--accent)}
+.scenario-btn:hover{background:var(--s3);border-color:var(--accent)}
+.scenario-btn.active{background:rgba(0,170,255,.15);border-color:var(--accent);color:#fff}
+.scenario-btn .name{font-weight:700}
+.scenario-btn .date{font-size:.7em;color:var(--dim)}
+.scenario-btn .tag{font-size:.6em;display:inline-block;margin-top:4px;padding:1px 6px;border-radius:3px}
 
-/* Playback */
-#playbar{display:flex;gap:6px;margin-bottom:8px}
-.pb-btn{
-  flex:1;padding:8px 4px;background:var(--s2);border:1px solid var(--border);
-  border-radius:5px;color:var(--text);cursor:pointer;font-size:1.2em;
-  transition:all .2s;text-align:center
-}
-.pb-btn:hover{background:var(--s3);border-color:var(--accent)}
-.pb-btn.active{background:rgba(0,170,255,.15);border-color:var(--accent);color:var(--accent)}
-#speedBar{display:flex;gap:5px;margin-bottom:10px}
-.sp-btn{
-  flex:1;padding:6px 2px;background:var(--s2);border:1px solid var(--border);
-  border-radius:4px;color:var(--dim);cursor:pointer;font-size:.78em;font-weight:700;
-  transition:all .2s;text-align:center
-}
-.sp-btn:hover{color:var(--text)}
-.sp-btn.active{background:rgba(0,170,255,.12);border-color:var(--accent);color:var(--accent)}
-
-#simProgress{width:100%;height:5px;background:var(--s2);border-radius:3px;margin-bottom:4px;overflow:hidden}
-#simBar{height:100%;background:linear-gradient(90deg,var(--safe),var(--accent));border-radius:3px;transition:width .5s;width:0%}
-#simTime{display:flex;justify-content:space-between;font-size:.72em;color:var(--dim);margin-bottom:8px}
+/* Controls */
+.control-bar{display:flex;gap:6px;margin-bottom:10px}
+.control-btn{flex:1;padding:8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--text);cursor:pointer;text-align:center;transition:all .2s}
+.control-btn:hover{background:var(--s3);border-color:var(--accent)}
+.control-btn.active{background:rgba(0,170,255,.15);border-color:var(--accent);color:var(--accent)}
+.speed-bar{display:flex;gap:5px;margin-bottom:12px}
+.speed-btn{flex:1;padding:5px;background:var(--s2);border:1px solid var(--border);border-radius:4px;color:var(--dim);cursor:pointer;font-size:.75em}
+.speed-btn.active{background:rgba(0,170,255,.15);border-color:var(--accent);color:var(--accent)}
+.progress-bar{width:100%;height:4px;background:var(--s2);border-radius:2px;margin-bottom:5px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--safe),var(--accent));width:0%;transition:width .3s}
+.time-info{display:flex;justify-content:space-between;font-size:.7em;color:var(--dim);margin-bottom:8px}
 
 /* Data input */
-#dataInputSection .phead{margin-bottom:8px}
-.tab-row{display:flex;gap:4px;margin-bottom:8px}
-.tab-btn{
-  flex:1;padding:5px;background:var(--s2);border:1px solid var(--border);
-  border-radius:4px;color:var(--dim);cursor:pointer;font-size:.72em;font-weight:700;
-  letter-spacing:.04em;text-align:center;transition:all .2s
-}
+.tab-row{display:flex;gap:4px;margin-bottom:10px}
+.tab-btn{flex:1;padding:6px;background:var(--s2);border:1px solid var(--border);border-radius:4px;color:var(--dim);cursor:pointer;font-size:.7em}
 .tab-btn.active{background:rgba(0,170,255,.1);border-color:var(--accent);color:var(--accent)}
 .tab-content{display:none}
 .tab-content.active{display:block}
-#dropZone{
-  border:2px dashed var(--border);border-radius:6px;padding:16px 8px;text-align:center;
-  cursor:pointer;transition:all .2s;font-size:.8em;color:var(--dim)
-}
-#dropZone:hover,#dropZone.drag{border-color:var(--accent);color:var(--accent);background:rgba(0,170,255,.04)}
-#dropZone .dz-icon{font-size:1.8em;margin-bottom:4px}
+.drop-zone{border:2px dashed var(--border);border-radius:6px;padding:16px;text-align:center;cursor:pointer;font-size:.75em}
+.drop-zone:hover{border-color:var(--accent)}
 #csvFile{display:none}
-#pasteArea{
-  width:100%;height:80px;background:var(--s2);border:1px solid var(--border);
-  border-radius:5px;color:var(--text);font-family:var(--mono);font-size:.72em;
-  padding:6px;resize:none
-}
-#pasteArea:focus{outline:none;border-color:var(--accent)}
-.input-btn{
-  width:100%;margin-top:6px;padding:7px;background:rgba(0,170,255,.12);
-  border:1px solid var(--accent);border-radius:4px;color:var(--accent);
-  cursor:pointer;font-size:.8em;font-weight:700;transition:all .2s
-}
-.input-btn:hover{background:rgba(0,170,255,.22)}
-#csvStatus{font-size:.72em;color:var(--safe);margin-top:5px;min-height:16px}
+#pasteArea{width:100%;height:80px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:.7em;padding:6px}
+.input-btn{width:100%;margin-top:6px;padding:6px;background:rgba(0,170,255,.12);border:1px solid var(--accent);border-radius:4px;color:var(--accent);cursor:pointer}
 
-/* ── CENTER PANEL ── */
-#centerCol{display:flex;flex-direction:column;gap:10px}
-
-/* Frequency big display */
-#freqPanel{
-  background:var(--s1);border:1px solid var(--border);border-radius:8px;
-  padding:14px 20px;display:flex;align-items:center;gap:20px
-}
-#freqBlock{flex:1}
-#freqLabel{font-size:.7em;font-weight:700;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-bottom:4px}
-#freqValue{
-  font-family:var(--mono);font-size:4.8em;font-weight:900;line-height:1;
-  color:var(--safe);transition:color .5s;letter-spacing:-.02em
-}
-#freqUnit{font-size:.9em;font-weight:400;color:var(--dim);margin-left:6px}
-#freqDelta{font-size:.85em;color:var(--dim);margin-top:4px;font-family:var(--mono)}
-#nominalBadge{font-size:.7em;color:var(--dim);margin-top:2px}
-
-/* RoCoF */
-#rocofBlock{
-  text-align:center;padding:10px 16px;background:var(--s2);
-  border-radius:6px;border:1px solid var(--border);min-width:130px
-}
-#rocofLabel{font-size:.7em;font-weight:700;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:4px}
-#rocofValue{
-  font-family:var(--mono);font-size:2.2em;font-weight:900;color:var(--safe);
-  transition:color .5s;line-height:1.1
-}
-#rocofUnit{font-size:.72em;color:var(--dim);margin-top:2px}
-#rocofExplain{font-size:.65em;color:var(--dim);margin-top:4px;line-height:1.3}
+/* Frequency display */
+.freq-panel{display:flex;align-items:center;gap:20px;margin-bottom:12px}
+.freq-block{flex:1}
+.freq-label{font-size:.7em;letter-spacing:.14em;color:var(--dim);margin-bottom:4px}
+.freq-value{font-family:var(--mono);font-size:4em;font-weight:900;line-height:1;color:var(--safe)}
+.freq-unit{font-size:.9em;color:var(--dim)}
+.freq-delta{font-size:.8em;color:var(--dim);margin-top:4px}
+.rocof-block{text-align:center;padding:10px 16px;background:var(--s2);border-radius:6px;min-width:130px}
+.rocof-value{font-family:var(--mono);font-size:2em;font-weight:900;color:var(--safe)}
+.rocof-explain{font-size:.6em;color:var(--dim);margin-top:4px}
 
 /* Chart */
-#chartPanel{
-  flex:1;background:var(--s1);border:1px solid var(--border);border-radius:8px;
-  padding:12px 14px;display:flex;flex-direction:column
+.chart-container{height:220px;margin-top:10px}
+canvas{width:100%!important;height:100%!important}
+
+/* Right panel */
+.risk-badge{
+  text-align:center;padding:16px;border-radius:8px;margin-bottom:12px;
+  font-size:1.6em;font-weight:900;letter-spacing:.04em;border:2px solid;
 }
-#chartTitle{font-size:.7em;font-weight:700;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
-#chartLegend{display:flex;gap:10px;font-size:.65em}
-.cl-item{display:flex;align-items:center;gap:4px}
-.cl-dot{width:10px;height:4px;border-radius:2px}
-#chartWrap{flex:1;position:relative;min-height:220px}
-canvas#freqChart{position:absolute;inset:0;width:100%!important;height:100%!important}
+.risk-normal{color:var(--safe);border-color:var(--safe);background:rgba(0,221,102,.05)}
+.risk-elevated{color:var(--warn);border-color:var(--warn);background:rgba(255,200,0,.05)}
+.risk-high{color:var(--high);border-color:var(--high);background:rgba(255,136,0,.05);animation:pulse 1.5s infinite}
+.risk-severe{color:var(--danger);border-color:var(--danger);background:rgba(255,51,0,.08);animation:pulse 1s infinite}
+.risk-critical{color:#ff8888;border-color:var(--crit);background:rgba(200,0,0,.12);animation:pulse .5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
 
-/* ── RIGHT PANEL ── */
-#rightCol{display:flex;flex-direction:column;gap:10px}
+.pred-countdown{font-family:var(--mono);font-size:2.8em;font-weight:900;text-align:center;color:var(--safe)}
+.metric-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.metric-row:last-child{border-bottom:none}
+.metric-label{font-size:.75em;color:var(--dim)}
+.metric-value{font-family:var(--mono);font-size:.9em;font-weight:700}
 
-/* Risk badge */
-#riskPanel{
-  background:var(--s1);border:1px solid var(--border);border-radius:8px;
-  padding:14px;text-align:center
-}
-#riskLabel{font-size:.68em;font-weight:700;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-bottom:8px}
-#riskBadge{
-  font-size:2em;font-weight:900;letter-spacing:.06em;padding:10px 16px;
-  border-radius:8px;border:2px solid;display:inline-block;
-  transition:all .5s;min-width:200px
-}
-.risk-normal{color:var(--safe);border-color:var(--safe);background:rgba(0,221,102,.08)}
-.risk-elevated{color:var(--warn);border-color:var(--warn);background:rgba(255,200,0,.08)}
-.risk-high{color:var(--high);border-color:var(--high);background:rgba(255,136,0,.10);animation:pulseHigh 1.8s infinite}
-.risk-severe{color:var(--danger);border-color:var(--danger);background:rgba(255,51,0,.12);animation:pulseSevere 1s infinite}
-.risk-critical{color:#ff8888;border-color:var(--crit);background:rgba(200,0,0,.16);animation:pulseCrit .6s infinite}
-.risk-blackout{color:#555;border-color:#333;background:#000;animation:none}
-@keyframes pulseHigh{0%,100%{box-shadow:0 0 0 0 rgba(255,136,0,0)}50%{box-shadow:0 0 16px 4px rgba(255,136,0,.3)}}
-@keyframes pulseSevere{0%,100%{box-shadow:0 0 0 0 rgba(255,51,0,0)}50%{box-shadow:0 0 20px 6px rgba(255,51,0,.4)}}
-@keyframes pulseCrit{0%,100%{box-shadow:0 0 0 0 rgba(200,0,0,0)}50%{box-shadow:0 0 28px 8px rgba(200,0,0,.5)}}
+.log-list{list-style:none;font-size:.7em;font-family:var(--mono);max-height:130px;overflow-y:auto}
+.log-list li{padding:4px 0;border-bottom:1px solid rgba(26,58,92,.3);display:flex;gap:8px}
+.log-time{color:var(--dim)}
+.log-ok{color:var(--safe)}
+.log-warn{color:var(--warn)}
+.log-danger{color:var(--danger)}
 
-#riskExplain{font-size:.8em;color:var(--dim);margin-top:8px;line-height:1.5}
-
-/* Prediction countdown */
-#predPanel{
-  background:var(--s1);border:1px solid var(--border);border-radius:8px;
-  padding:12px 14px;text-align:center
-}
-#predLabel{font-size:.68em;font-weight:700;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
-#predCountdown{
-  font-family:var(--mono);font-size:3em;font-weight:900;letter-spacing:.04em;
-  color:var(--safe);transition:color .5s;line-height:1
-}
-#predSub{font-size:.75em;color:var(--dim);margin-top:5px;line-height:1.4}
-#predHorizonBar{
-  width:100%;height:6px;background:var(--s2);border-radius:3px;margin-top:8px;overflow:hidden
-}
-#predHorizonFill{
-  height:100%;background:var(--safe);border-radius:3px;width:100%;
-  transition:width .8s,background .5s
-}
-
-/* Metrics */
-#metricsPanel .metric-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:7px 0;border-bottom:1px solid var(--border);
-}
-#metricsPanel .metric-row:last-child{border-bottom:none}
-.m-label{font-size:.75em;color:var(--dim)}
-.m-val{font-family:var(--mono);font-size:.95em;font-weight:700;color:var(--text)}
-
-/* Action */
-#actionPanel{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
-#actionIcon{font-size:1.4em;margin-right:6px}
-#actionText{font-size:.82em;color:var(--text);line-height:1.55}
-
-/* Event log */
-#logPanel{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:12px 14px;flex:1}
-#logList{list-style:none;font-size:.73em;font-family:var(--mono);max-height:140px;overflow-y:auto}
-#logList li{padding:3px 0;border-bottom:1px solid rgba(26,58,92,.5);display:flex;gap:8px}
-#logList li:last-child{border-bottom:none}
-.log-time{color:var(--dim);flex-shrink:0}
-.log-msg.log-ok{color:var(--safe)}
-.log-msg.log-warn{color:var(--warn)}
-.log-msg.log-danger{color:var(--danger)}
-.log-msg.log-info{color:var(--accent)}
-
-/* ── BOTTOM SECTION ── */
-#bottomRow{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:12px;padding:12px 14px 14px;
-}
-#scenarioCard{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px}
-#scenarioTitle{font-size:1.05em;font-weight:700;color:#fff;margin-bottom:6px}
-#scenarioDesc{font-size:.82em;color:var(--dim);line-height:1.6}
-#scenarioStats{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
-.sc-stat{font-size:.75em;color:var(--dim)}
-.sc-stat strong{color:var(--text)}
-
-#glossary{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px}
-#glossary .gl-item{margin-bottom:8px;font-size:.78em}
-.gl-term{font-weight:700;color:var(--accent)}
-.gl-def{color:var(--dim);line-height:1.5}
-
-/* ── THRESHOLD GUIDE ── */
-#threshBar{
-  display:flex;align-items:stretch;height:22px;border-radius:5px;overflow:hidden;
-  margin:6px 0;border:1px solid var(--border)
-}
-.th-seg{flex:1;display:flex;align-items:center;justify-content:center;font-size:.6em;font-weight:700;letter-spacing:.04em}
-
-/* ── BLACKOUT OVERLAY ── */
-#blackoutOverlay{
+/* Blackout overlay */
+.blackout-overlay{
   display:none;position:fixed;inset:0;z-index:200;
   background:#000;align-items:center;justify-content:center;
-  flex-direction:column;text-align:center;animation:fadeIn .5s
+  flex-direction:column;text-align:center;
 }
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-#blackoutOverlay.show{display:flex}
-#boTitle{font-size:3em;font-weight:900;color:#cc0000;letter-spacing:.1em;margin-bottom:10px;animation:pulseCrit 1s infinite}
-#boSub{font-size:1.1em;color:#555;margin-bottom:20px}
-#boStats{font-size:.9em;color:#333;font-family:var(--mono)}
-#boRestart{
-  margin-top:28px;padding:12px 32px;background:#1a0000;border:1px solid #cc0000;
-  border-radius:6px;color:#cc0000;cursor:pointer;font-size:1em;font-weight:700;
-  transition:all .2s
-}
-#boRestart:hover{background:#cc0000;color:#fff}
+.blackout-overlay.show{display:flex}
+.blackout-title{font-size:3em;font-weight:900;color:#cc0000;margin-bottom:10px}
+.blackout-restart{margin-top:28px;padding:10px 28px;background:#1a0000;border:1px solid #cc0000;border-radius:6px;color:#cc0000;cursor:pointer}
 </style>
 </head>
 <body>
 
-<!-- ── ALERT BANNER ── -->
-<div id="alertBanner" style="display:none">
-  <div id="alertIcon">⚡</div>
-  <div id="alertMain">
-    <div id="alertTitle">Grid stability anomaly detected</div>
-    <div id="alertSub">GridGuard analysis in progress</div>
-  </div>
-  <div id="alertAction" style="border-color:var(--warn)">Monitoring…</div>
-  <div id="alertCountdown">--:--</div>
+<div class="disclaimer">
+  ⚠️ TOY DEMO: Simplified browser demonstration. Real proprietary engine not included.
+  <a href="#" target="_blank">Learn more →</a>
 </div>
 
-<!-- ── TOP BAR ── -->
-<div id="topbar">
+<div class="header">
   <div class="logo">Grid<span>Guard</span><br><sub>BLACKOUT PREVENTION AI</sub></div>
-  <div id="scenarioLabel">SELECT A SCENARIO TO BEGIN</div>
-  <div id="topClock">
-    SCENARIO TIME<br><span id="clockDisplay">00:00 / 10:00</span>
-  </div>
+  <div class="scenario-badge" id="scenarioLabel">SELECT A SCENARIO</div>
+  <div class="clock">SCENARIO TIME<br><span id="clockDisplay">00:00</span></div>
 </div>
 
-<!-- ── MAIN 3-COLUMN GRID ── -->
-<div id="main">
-
+<div class="main-grid">
   <!-- LEFT COLUMN -->
-  <div id="leftCol">
-
-    <!-- Scenarios -->
+  <div>
     <div class="panel">
-      <div class="phead">📂 Choose a Scenario</div>
-
-      <button class="sc-btn active" onclick="loadScenario('spain2025')" id="btn-spain2025">
-        <div class="sc-name">🇪🇸 Iberian Blackout</div>
-        <div class="sc-date">Spain &amp; Portugal — April 28, 2025</div>
-        <span class="sc-tag" style="background:rgba(200,0,0,.15);color:#ff8888">HISTORICAL</span>
+      <div class="panel-title">📂 SCENARIOS</div>
+      <button class="scenario-btn active" onclick="loadScenario('spain')" id="btn-spain">
+        <div class="name">🇪🇸 Iberian Blackout 2025</div>
+        <div class="date">Spain & Portugal — April 28, 2025</div>
+        <span class="tag" style="background:#cc000033;color:#ff8888">HISTORICAL</span>
       </button>
-
-      <button class="sc-btn" onclick="loadScenario('europe2006')" id="btn-europe2006">
-        <div class="sc-name">🌍 European Cascade</div>
-        <div class="sc-date">UCTE Grid Split — November 4, 2006</div>
-        <span class="sc-tag" style="background:rgba(200,0,0,.15);color:#ff8888">HISTORICAL</span>
+      <button class="scenario-btn" onclick="loadScenario('cascade')" id="btn-cascade">
+        <div class="name">🌍 European Cascade 2006</div>
+        <div class="date">UCTE Grid Split — Nov 4, 2006</div>
+        <span class="tag" style="background:#cc000033;color:#ff8888">HISTORICAL</span>
       </button>
-
-      <button class="sc-btn" onclick="loadScenario('dunkelflaute')" id="btn-dunkelflaute">
-        <div class="sc-name">🌑 Dunkelflaute</div>
-        <div class="sc-date">EU Renewable Drought — 2025 Projection</div>
-        <span class="sc-tag" style="background:rgba(255,136,0,.15);color:#ffaa44">PROJECTION</span>
+      <button class="scenario-btn" onclick="loadScenario('dunkelflaute')" id="btn-dunkelflaute">
+        <div class="name">🌑 Dunkelflaute 2025</div>
+        <div class="date">EU Renewable Drought</div>
+        <span class="tag" style="background:#ff880033;color:#ffaa44">PROJECTION</span>
       </button>
-
-      <button class="sc-btn" onclick="loadScenario('texas2021')" id="btn-texas2021">
-        <div class="sc-name">🌨 Texas Polar Vortex</div>
-        <div class="sc-date">Winter Storm Uri — February 2021</div>
-        <span class="sc-tag" style="background:rgba(200,0,0,.15);color:#ff8888">HISTORICAL</span>
+      <button class="scenario-btn" onclick="loadScenario('texas')" id="btn-texas">
+        <div class="name">🌨 Texas Polar Vortex 2021</div>
+        <div class="date">Winter Storm Uri</div>
+        <span class="tag" style="background:#cc000033;color:#ff8888">HISTORICAL</span>
       </button>
     </div>
 
-    <!-- Playback Controls -->
     <div class="panel">
-      <div class="phead">▶ Simulation Controls</div>
-      <div id="playbar">
-        <button class="pb-btn" id="btnPlay"   onclick="simPlay()"   title="Play">▶</button>
-        <button class="pb-btn" id="btnPause"  onclick="simPause()"  title="Pause">⏸</button>
-        <button class="pb-btn" id="btnStop"   onclick="simStop()"   title="Reset">⏹</button>
-        <button class="pb-btn" id="btnFF"     onclick="simSkip()"   title="Skip ahead 1 min">⏩</button>
+      <div class="panel-title">▶ SIMULATION</div>
+      <div class="control-bar">
+        <div class="control-btn" onclick="simPlay()" id="btnPlay">▶ Play</div>
+        <div class="control-btn" onclick="simPause()" id="btnPause">⏸ Pause</div>
+        <div class="control-btn" onclick="simStop()" id="btnStop">⏹ Reset</div>
+        <div class="control-btn" onclick="simSkip()">⏩ Skip</div>
       </div>
-      <div id="speedBar">
-        <button class="sp-btn active" onclick="setSpeed(1)"  id="sp1">1×</button>
-        <button class="sp-btn"        onclick="setSpeed(2)"  id="sp2">2×</button>
-        <button class="sp-btn"        onclick="setSpeed(5)"  id="sp5">5×</button>
-        <button class="sp-btn"        onclick="setSpeed(10)" id="sp10">10×</button>
+      <div class="speed-bar">
+        <div class="speed-btn active" onclick="setSpeed(1)" id="sp1">1×</div>
+        <div class="speed-btn" onclick="setSpeed(2)" id="sp2">2×</div>
+        <div class="speed-btn" onclick="setSpeed(5)" id="sp5">5×</div>
+        <div class="speed-btn" onclick="setSpeed(10)" id="sp10">10×</div>
       </div>
-      <div id="simProgress"><div id="simBar"></div></div>
-      <div id="simTime">
-        <span id="simElapsed">Elapsed: 0:00</span>
-        <span id="simRemain">Remaining: 10:00</span>
+      <div class="progress-bar"><div class="progress-fill" id="simFill"></div></div>
+      <div class="time-info">
+        <span id="simElapsed">0:00</span>
+        <span id="simTotal">10:00</span>
       </div>
     </div>
 
-    <!-- Data Input -->
-    <div class="panel" id="dataInputSection">
-      <div class="phead">📤 Feed Your Own Data</div>
+    <div class="panel">
+      <div class="panel-title">📤 CUSTOM DATA</div>
       <div class="tab-row">
-        <button class="tab-btn active" onclick="switchTab('csv')">CSV Upload</button>
-        <button class="tab-btn"        onclick="switchTab('paste')">Paste Data</button>
+        <div class="tab-btn active" onclick="switchTab('csv')">CSV Upload</div>
+        <div class="tab-btn" onclick="switchTab('paste')">Paste Data</div>
       </div>
-
       <div class="tab-content active" id="tab-csv">
-        <div id="dropZone" onclick="document.getElementById('csvFile').click()"
-             ondragover="event.preventDefault();this.classList.add('drag')"
-             ondragleave="this.classList.remove('drag')"
-             ondrop="handleDrop(event)">
-          <div class="dz-icon">📁</div>
-          <div>Drop CSV file here or click to browse</div>
-          <div style="font-size:.68em;margin-top:4px;color:var(--dim)">One column: frequency values in Hz (50 or 60 Hz nominal)</div>
+        <div class="drop-zone" onclick="document.getElementById('csvFile').click()" ondragover="event.preventDefault();this.style.borderColor='#00aaff'" ondragleave="this.style.borderColor=''" ondrop="handleDrop(event)">
+          📁 Drop CSV or click
         </div>
-        <input type="file" id="csvFile" accept=".csv,.txt" onchange="handleCsvFile(this.files[0])">
-        <div id="csvStatus"></div>
+        <input type="file" id="csvFile" accept=".csv" onchange="handleFile(this.files[0])">
+        <div id="csvStatus" style="font-size:.7em;margin-top:5px"></div>
       </div>
-
       <div class="tab-content" id="tab-paste">
-        <textarea id="pasteArea" placeholder="Paste frequency values here, one per line or comma-separated:&#10;50.02&#10;49.98&#10;49.91&#10;..."></textarea>
-        <button class="input-btn" onclick="loadPastedData()">▶ Analyze Pasted Data</button>
+        <textarea id="pasteArea" placeholder="Paste frequency values:&#10;50.02, 49.98, 49.91..."></textarea>
+        <div class="input-btn" onclick="loadPasted()">Analyze Data</div>
       </div>
     </div>
-
-  </div><!-- /leftCol -->
-
+  </div>
 
   <!-- CENTER COLUMN -->
-  <div id="centerCol">
-
-    <!-- Frequency + RoCoF -->
-    <div id="freqPanel">
-      <div id="freqBlock">
-        <div id="freqLabel">⚡ Grid Frequency</div>
-        <div>
-          <span id="freqValue">--.-</span><span id="freqUnit">Hz</span>
-        </div>
-        <div id="freqDelta">Change: — Hz/s</div>
-        <div id="nominalBadge">Nominal: 50.00 Hz &nbsp;|&nbsp; Tolerance: ±0.2 Hz</div>
+  <div>
+    <div class="freq-panel">
+      <div class="freq-block">
+        <div class="freq-label">⚡ GRID FREQUENCY</div>
+        <div><span class="freq-value" id="freqValue">--.--</span><span class="freq-unit">Hz</span></div>
+        <div class="freq-delta" id="freqDelta">Change: — Hz/s</div>
+        <div class="freq-delta" id="nominalInfo">Nominal: 50.00 Hz</div>
       </div>
-      <div id="rocofBlock">
-        <div id="rocofLabel">Rate of Change</div>
-        <div id="rocofValue">0.000</div>
-        <div id="rocofUnit">Hz / second</div>
-        <div id="rocofExplain">How fast the frequency<br>is dropping right now.<br><b>&gt;0.5 Hz/s = dangerous</b></div>
+      <div class="rocof-block">
+        <div class="rocof-label">RATE OF CHANGE</div>
+        <div class="rocof-value" id="rocofValue">0.000</div>
+        <div class="rocof-explain">Hz / sec</div>
       </div>
     </div>
 
-    <!-- Chart -->
-    <div id="chartPanel">
-      <div id="chartTitle">
-        <span>FREQUENCY HISTORY — Real-time</span>
-        <span id="chartLegend">
-          <span class="cl-item"><span class="cl-dot" style="background:var(--safe)"></span> Normal</span>
-          <span class="cl-item"><span class="cl-dot" style="background:var(--warn)"></span> Caution</span>
-          <span class="cl-item"><span class="cl-dot" style="background:var(--danger)"></span> Critical</span>
-        </span>
-      </div>
-
-      <!-- Threshold guide bar -->
-      <div id="threshBar">
-        <div class="th-seg" style="background:rgba(0,200,80,.18);color:#00cc66;flex:2">SAFE<br>49.8–50.2</div>
-        <div class="th-seg" style="background:rgba(255,200,0,.18);color:#ffcc00">⚠ 49.2</div>
-        <div class="th-seg" style="background:rgba(255,100,0,.18);color:#ff8800">⚠ 48.5</div>
-        <div class="th-seg" style="background:rgba(255,30,0,.20);color:#ff4444">🚨 47.5</div>
-        <div class="th-seg" style="background:rgba(100,0,0,.25);color:#994444">BLACKOUT</div>
-      </div>
-
-      <div id="chartWrap">
+    <div class="panel">
+      <div class="panel-title">📈 FREQUENCY HISTORY</div>
+      <div class="chart-container">
         <canvas id="freqChart"></canvas>
       </div>
     </div>
-
-  </div><!-- /centerCol -->
-
+  </div>
 
   <!-- RIGHT COLUMN -->
-  <div id="rightCol">
+  <div>
+    <div id="riskBadge" class="risk-badge risk-normal">STANDBY</div>
 
-    <!-- Risk Level -->
-    <div id="riskPanel" class="panel">
-      <div id="riskLabel">🛡 GridGuard Risk Level</div>
-      <div id="riskBadge" class="risk-normal">STANDBY</div>
-      <div id="riskExplain">Load a scenario and press Play to begin analysis.</div>
+    <div class="panel">
+      <div class="panel-title">⏱ PREDICTED TIME TO EVENT</div>
+      <div class="pred-countdown" id="predCountdown">--:--</div>
+      <div style="font-size:.7em;color:var(--dim);text-align:center;margin-top:5px" id="predSub">Select scenario and Play</div>
     </div>
 
-    <!-- Countdown -->
-    <div id="predPanel" class="panel">
-      <div id="predLabel">⏱ Predicted Time to Event</div>
-      <div id="predCountdown" style="color:var(--dim)">--:--</div>
-      <div id="predSub">Start a scenario to see GridGuard's<br>real-time prediction</div>
-      <div id="predHorizonBar"><div id="predHorizonFill"></div></div>
+    <div class="panel">
+      <div class="panel-title">📊 LIVE METRICS</div>
+      <div class="metric-row"><span class="metric-label">Stability Index</span><span class="metric-value" id="mStability">— %</span></div>
+      <div class="metric-row"><span class="metric-label">Shock Risk</span><span class="metric-value" id="mShock">—</span></div>
+      <div class="metric-row"><span class="metric-label">Frequency Deviation</span><span class="metric-value" id="mDeviation">— mHz</span></div>
+      <div class="metric-row"><span class="metric-label">Analyses Run</span><span class="metric-value" id="mCount">0</span></div>
+      <div class="metric-row"><span class="metric-label">Processing</span><span class="metric-value" id="mProc">— µs</span></div>
     </div>
 
-    <!-- Key Metrics -->
-    <div id="metricsPanel" class="panel">
-      <div class="phead">📊 Live Metrics</div>
-      <div class="metric-row">
-        <span class="m-label">Grid Stability</span>
-        <span class="m-val" id="mStability">— %</span>
-      </div>
-      <div class="metric-row">
-        <span class="m-label">Shock Risk Index</span>
-        <span class="m-val" id="mShock">—</span>
-      </div>
-      <div class="metric-row">
-        <span class="m-label">Freq. Deviation</span>
-        <span class="m-val" id="mDeviation">— mHz</span>
-      </div>
-      <div class="metric-row">
-        <span class="m-label">Analyses Run</span>
-        <span class="m-val" id="mCount">0</span>
-      </div>
-      <div class="metric-row">
-        <span class="m-label">Processing Time</span>
-        <span class="m-val" id="mProc">— µs</span>
-      </div>
+    <div class="panel">
+      <div class="panel-title">📋 OPERATOR GUIDANCE</div>
+      <div id="actionText" style="font-size:.8em;line-height:1.5">Awaiting data...</div>
     </div>
 
-    <!-- Operator Action -->
-    <div id="actionPanel" class="panel">
-      <div class="phead"><span id="actionIcon">📋</span> Operator Guidance</div>
-      <div id="actionText">Awaiting data…</div>
+    <div class="panel">
+      <div class="panel-title">🗒 EVENT LOG</div>
+      <ul class="log-list" id="logList"></ul>
     </div>
-
-    <!-- Event Log -->
-    <div id="logPanel" class="panel">
-      <div class="phead">🗒 Event Log</div>
-      <ul id="logList"></ul>
-    </div>
-
-  </div><!-- /rightCol -->
-
-</div><!-- /main -->
-
-
-<!-- ── BOTTOM: Scenario Info + Glossary ── -->
-<div id="bottomRow">
-  <div id="scenarioCard">
-    <div id="scenarioTitle">Welcome to GridGuard™</div>
-    <div id="scenarioDesc">Select a scenario above and press Play. GridGuard will analyze the incoming frequency data in real time and predict grid instability <strong>minutes before it becomes catastrophic</strong> — giving operators time to act.</div>
-    <div id="scenarioStats"></div>
-  </div>
-  <div id="glossary">
-    <div class="phead">📖 What does it all mean?</div>
-    <div class="gl-item"><span class="gl-term">Frequency (Hz)</span><br><span class="gl-def">Power grids run at exactly 50 Hz (EU) or 60 Hz (US). If too many generators trip or too much load is added, the frequency drops — like a car engine under stress. Below 47.5 Hz, automatic protection systems shut everything down.</span></div>
-    <div class="gl-item"><span class="gl-term">RoCoF (Rate of Change of Frequency)</span><br><span class="gl-def">How fast the frequency is falling — in Hz per second. A slow drift is manageable. A rapid plunge (&gt;0.5 Hz/s) means a major generator just failed and a cascade is starting.</span></div>
-    <div class="gl-item"><span class="gl-term">Cascade Failure</span><br><span class="gl-def">When one generator fails, others become overloaded and trip too — like dominoes. Within seconds, a whole region can go dark. GridGuard detects the mathematical signature of this process before it unfolds.</span></div>
-    <div class="gl-item"><span class="gl-term">Dunkelflaute</span><br><span class="gl-def">German: "Dark doldrums." When wind and solar produce nothing for days, and no fossil backup remains, grid frequency slowly starves. Without the rotational inertia of spinning turbines, the grid has no buffer — collapse can be total and fast.</span></div>
   </div>
 </div>
 
-<!-- ── BLACKOUT OVERLAY ── -->
-<div id="blackoutOverlay">
-  <div id="boTitle">⛔ BLACKOUT</div>
-  <div id="boSub">Grid frequency has collapsed. Power loss detected across entire zone.</div>
-  <div id="boStats" id="boStats"></div>
-  <div style="margin-top:16px;font-size:.85em;color:#444">With GridGuard deployed, this event was predicted <span id="boPredTime" style="color:#885555;font-weight:700">—</span> in advance.<br>Operators had time to act. This blackout was <strong style="color:#773333">preventable.</strong></div>
-  <button id="boRestart" onclick="simStop();closeBlackout()">↺ Run Again</button>
+<div id="blackoutOverlay" class="blackout-overlay">
+  <div class="blackout-title">⛔ BLACKOUT</div>
+  <div style="color:#555">Grid frequency has collapsed.</div>
+  <div style="margin-top:10px;color:#444">Predicted <span id="boPredTime" style="color:#885555">—</span> in advance</div>
+  <div class="blackout-restart" onclick="closeBlackout();simStop()">↺ Run Again</div>
 </div>
-
 
 <script>
-// ══════════════════════════════════════════════════
-//  SCENARIO DATA
-// ══════════════════════════════════════════════════
+// ==================== TOY GRIDGUARD ENGINE ====================
+const PHI = (1 + Math.sqrt(5)) / 2;
+
+function analyzeFrequency(freqHistory) {
+  const data = freqHistory.slice(-12);
+  if (data.length < 4) {
+    return { level: 'NORMAL', horizon: 60, stability: 0.92, shock: 0.05, rocof: 0 };
+  }
+  
+  // Calculate stability from variance
+  const diffs = [];
+  for (let i = 1; i < data.length; i++) diffs.push(data[i] - data[i-1]);
+  const meanDiff = diffs.reduce((a,b)=>a+b,0)/diffs.length;
+  const variance = diffs.reduce((sum, v) => sum + Math.pow(v - meanDiff, 2), 0) / diffs.length;
+  const stability = Math.max(0.1, 1 - Math.sqrt(variance) * 12);
+  
+  // Shock risk from acceleration
+  let shock = 0;
+  if (diffs.length >= 2) {
+    const accel = [];
+    for (let i = 1; i < diffs.length; i++) accel.push(diffs[i] - diffs[i-1]);
+    const avgAccel = Math.abs(accel.reduce((a,b)=>a+b,0)/accel.length);
+    const avgDiff = Math.abs(meanDiff);
+    shock = Math.min(0.95, (avgDiff + avgAccel * 2) / 0.5);
+  }
+  
+  // Risk score
+  const risk = (1 - stability) * 0.6 + shock * 0.4;
+  
+  let level, horizon;
+  if (risk > 0.82) { level = 'CRITICAL'; horizon = 2; }
+  else if (risk > 0.72) { level = 'SEVERE'; horizon = 5; }
+  else if (risk > 0.58) { level = 'HIGH'; horizon = 15; }
+  else if (risk > 0.38) { level = 'ELEVATED'; horizon = 30; }
+  else { level = 'NORMAL'; horizon = 60; }
+  
+  const rocof = freqHistory.length >= 2 ? (freqHistory[freqHistory.length-1] - freqHistory[freqHistory.length-2]) / 5 : 0;
+  
+  return {
+    level, horizon,
+    stability: parseFloat(stability.toFixed(3)),
+    shock: parseFloat(shock.toFixed(3)),
+    rocof: parseFloat(rocof.toFixed(4)),
+    resilience: Math.round(stability * 100)
+  };
+}
+
+// ==================== SCENARIO DATA ====================
 const SCENARIOS = {
-
-  spain2025: {
-    name: "Iberian Blackout — Spain & Portugal",
-    date: "April 28, 2025",
+  spain: {
+    name: 'Iberian Blackout',
     nominal: 50.0,
-    desc: "The largest blackout in Iberian Peninsula history. At 12:33 CEST, approximately 15 GW of generation was lost in seconds — equivalent to cutting power to all of Madrid and Barcelona simultaneously. The isolated Spanish grid (weakly coupled to France) had insufficient inertia to absorb the shock. Frequency plummeted at over 2 Hz/s. Automated protection relays cascaded across the peninsula within 5 seconds. GridGuard detects the mathematical precursors beginning 4–6 minutes before collapse.",
-    stats: [{k:"Grid affected",v:"60 million people"},{k:"Duration",v:"up to 18 hours"},{k:"Peak RoCoF",v:"~2.3 Hz/s"},{k:"Generation lost",v:"~15 GW"}],
-    waypoints: [
-      [0,50.00],[30,50.01],[60,50.00],[90,49.99],[120,49.98],[150,49.97],
-      [180,49.96],[210,49.94],[240,49.91],[270,49.87],[300,49.81],
-      [330,49.72],[360,49.58],[390,49.38],[420,49.10],[440,48.80],
-      [460,48.35],[480,47.70],[500,46.80],[515,45.20],[525,42.50],
-      [535,37.00],[542,0.00],[600,0.00]
-    ],
-    noise: 0.008,
-    warningAt: 210,
-    criticalAt: 380,
-    blackoutAt: 535,
+    data: (function() {
+      const points = [];
+      for (let t = 0; t <= 600; t += 5) {
+        let f;
+        if (t < 120) f = 50.00 + (Math.random() - 0.5) * 0.02;
+        else if (t < 300) f = 50.00 - (t - 120) * 0.0015 + (Math.random() - 0.5) * 0.015;
+        else if (t < 480) f = 49.70 - (t - 300) * 0.005 + (Math.random() - 0.5) * 0.02;
+        else if (t < 540) f = 48.80 - (t - 480) * 0.025 + (Math.random() - 0.5) * 0.03;
+        else f = Math.max(0, 45.0 - (t - 540) * 0.08);
+        points.push(parseFloat(f.toFixed(3)));
+      }
+      return points;
+    })()
   },
-
-  europe2006: {
-    name: "European Cascade — UCTE Grid Split",
-    date: "November 4, 2006",
+  cascade: {
+    name: 'European Cascade',
     nominal: 50.0,
-    desc: "An E.ON power line in northwest Germany was switched off for maintenance without proper coordination, triggering overloads on parallel lines. The European grid split into three asynchronous islands. The western zone (France, Spain, Portugal, western Germany) immediately became overloaded: frequency plunged. The eastern zone saw frequency rise sharply above 51 Hz. Over 15 million European homes lost power. The oscillations visible in GridGuard's trace are the mathematical signature of zone splitting — a pattern the algorithm recognizes as a cascade in progress.",
-    stats: [{k:"Countries affected",v:"10+ EU states"},{k:"Homes affected",v:"~15 million"},{k:"Grid islands formed",v:"3 zones"},{k:"Peak deviation",v:"±800 mHz"}],
-    waypoints: [
-      [0,50.00],[30,50.02],[60,50.04],[90,49.88],[120,50.22],[150,49.65],
-      [180,50.48],[210,49.35],[240,50.80],[270,49.00],[300,51.15],
-      [330,48.60],[360,51.60],[390,48.00],[420,51.90],[445,47.40],
-      [465,48.50],[480,46.80],[500,47.80],[520,46.00],[535,44.50],
-      [545,0.00],[600,0.00]
-    ],
-    noise: 0.015,
-    warningAt: 150,
-    criticalAt: 360,
-    blackoutAt: 540,
+    data: (function() {
+      const points = [];
+      for (let t = 0; t <= 600; t += 5) {
+        let f;
+        if (t < 180) f = 50.00 + Math.sin(t/60) * 0.15 + (Math.random() - 0.5) * 0.02;
+        else if (t < 360) f = 49.80 - (t - 180) * 0.002 + Math.sin(t/40) * 0.2 + (Math.random() - 0.5) * 0.025;
+        else if (t < 500) f = 48.50 - (t - 360) * 0.008 + (Math.random() - 0.5) * 0.03;
+        else f = Math.max(0, 46.0 - (t - 500) * 0.06);
+        points.push(parseFloat(f.toFixed(3)));
+      }
+      return points;
+    })()
   },
-
   dunkelflaute: {
-    name: "Dunkelflaute — EU Renewable Drought",
-    date: "Czech Republic / Central EU — 2025 Scenario",
+    name: 'Dunkelflaute',
     nominal: 50.0,
-    desc: "A winter week with no wind and heavy overcast across central Europe. Photovoltaic panels produce nothing; wind turbines stand still. Without the kinetic inertia of spinning coal and nuclear turbines (several Czech coal plants were retired in 2024–2025), the grid has no buffer against demand spikes. Frequency drifts downward slowly but relentlessly. This scenario shows why renewable grids need synchronous condensers, battery storage, or demand-response — without inertia, even a gradual imbalance ends in blackout. GridGuard raises the alarm 5+ minutes before the grid becomes unrecoverable.",
-    stats: [{k:"Primary cause",v:"No wind, no solar"},{k:"Missing inertia",v:"~8 GW retired coal"},{k:"Drift rate",v:"~0.8 mHz/s"},{k:"Recoverable until",v:"~48.8 Hz"}],
-    waypoints: [
-      [0,50.00],[60,49.99],[120,49.97],[180,49.95],[240,49.92],
-      [300,49.87],[360,49.80],[420,49.70],[460,49.57],[490,49.40],
-      [510,49.18],[530,48.88],[545,48.50],[558,48.00],[568,47.40],
-      [576,46.50],[582,44.00],[588,0.00],[600,0.00]
-    ],
-    noise: 0.005,
-    warningAt: 300,
-    criticalAt: 490,
-    blackoutAt: 582,
+    data: (function() {
+      const points = [];
+      for (let t = 0; t <= 600; t += 5) {
+        let f;
+        if (t < 60) f = 50.00 + (Math.random() - 0.5) * 0.01;
+        else if (t < 420) f = 50.00 - (t - 60) * 0.0008 + (Math.random() - 0.5) * 0.008;
+        else if (t < 560) f = 49.40 - (t - 420) * 0.004 + (Math.random() - 0.5) * 0.015;
+        else f = Math.max(0, 47.0 - (t - 560) * 0.04);
+        points.push(parseFloat(f.toFixed(3)));
+      }
+      return points;
+    })()
   },
-
-  texas2021: {
-    name: "Texas Polar Vortex — Winter Storm Uri",
-    date: "February 10–18, 2021",
+  texas: {
+    name: 'Texas Polar Vortex',
     nominal: 60.0,
-    desc: "When Arctic temperatures plunged across Texas, gas infrastructure froze and wind turbines iced over. Demand soared while supply collapsed. ERCOT (Texas grid) came within 4 minutes of a total uncontrolled blackout that could have lasted months. The visible step-jumps in this trace are Under-Frequency Load Shedding (UFLS) events — automated systems that disconnect neighborhoods to save the broader grid. Each jump temporarily recovers the frequency, but the relentless demand keeps pulling it down. GridGuard would have provided operators a 5-minute warning before each critical threshold.",
-    stats: [{k:"People affected",v:"4.5 million homes"},{k:"Deaths",v:"~250+"},{k:"Economic loss",v:"~$195 billion"},{k:"Closest to collapse",v:"4 minutes 37 seconds"}],
-    waypoints: [
-      [0,60.00],[60,59.99],[90,59.95],[120,59.84],[145,59.62],
-      [158,59.80],[170,59.74],[195,59.50],[210,59.70],[225,59.62],
-      [250,59.36],[264,59.56],[278,59.45],[300,59.18],[315,59.40],
-      [330,59.10],[360,58.72],[390,58.25],[420,57.60],[450,56.70],
-      [470,55.40],[488,53.50],[500,0.00],[600,0.00]
-    ],
-    noise: 0.020,
-    warningAt: 120,
-    criticalAt: 330,
-    blackoutAt: 495,
+    data: (function() {
+      const points = [];
+      for (let t = 0; t <= 600; t += 5) {
+        let f;
+        if (t < 100) f = 60.00 + (Math.random() - 0.5) * 0.03;
+        else if (t < 300) f = 59.90 - (t - 100) * 0.002 + (Math.random() - 0.5) * 0.02;
+        else if (t < 450) f = 59.00 - (t - 300) * 0.006 + (Math.random() - 0.5) * 0.025;
+        else f = Math.max(0, 56.0 - (t - 450) * 0.035);
+        points.push(parseFloat(f.toFixed(3)));
+      }
+      return points;
+    })()
   }
 };
 
-
-// ══════════════════════════════════════════════════
-//  INTERPOLATION & DATA GENERATION
-// ══════════════════════════════════════════════════
-function buildScenarioData(sc) {
-  const wp = sc.waypoints;
-  const TOTAL = 600, STEP = 5;
-  const out = [];
-  for (let t = 0; t <= TOTAL; t += STEP) {
-    let freq;
-    if (t <= wp[0][0]) { freq = wp[0][1]; }
-    else if (t >= wp[wp.length-1][0]) { freq = wp[wp.length-1][1]; }
-    else {
-      for (let i = 0; i < wp.length-1; i++) {
-        if (t >= wp[i][0] && t < wp[i+1][0]) {
-          const frac = (t - wp[i][0]) / (wp[i+1][0] - wp[i][0]);
-          // smooth step
-          const s = frac * frac * (3 - 2*frac);
-          freq = wp[i][1] + s * (wp[i+1][1] - wp[i][1]);
-          break;
-        }
-      }
-    }
-    // add noise (only when not in collapse)
-    if (freq > 5) freq += (Math.random()-0.5)*2*sc.noise;
-    out.push(parseFloat(freq.toFixed(4)));
-  }
-  return out; // 121 points
-}
-
-
-// ══════════════════════════════════════════════════
-//  GRIDGUARD ENGINE  (JS mirror of Python backend)
-// ══════════════════════════════════════════════════
-const _Φ = (1 + Math.sqrt(5)) / 2;
-
-function ggAnalyze(freqHistory) {
-  const data = freqHistory.slice(-8);
-  if (data.length < 4) return null;
-
-  const diffs = [];
-  for (let i = 1; i < data.length; i++) diffs.push(data[i] - data[i-1]);
-
-  // Stability
-  const mean_d = diffs.reduce((a,b)=>a+b,0)/diffs.length;
-  const std_d  = Math.sqrt(diffs.map(x=>(x-mean_d)**2).reduce((a,b)=>a+b,0)/diffs.length);
-  const stability = Math.max(0.1, 1 - std_d * 8);
-
-  // Pattern oscillation
-  let patterns = 0.3;
-  if (data.length >= 6) {
-    const half = Math.floor(data.length/2);
-    const rec  = data.slice(-half);
-    const hist = data.slice(0, data.length-half);
-    const stdRec  = stdDev(rec);
-    const stdHist = stdDev(hist);
-    patterns = Math.min(0.95, stdRec / (stdHist + 1e-10));
-  }
-
-  // Burgers shock
-  let shock = 0;
-  if (diffs.length >= 2) {
-    const d2 = [];
-    for (let i = 1; i < diffs.length; i++) d2.push(diffs[i]-diffs[i-1]);
-    const nu  = Math.abs(d2.reduce((a,b)=>a+b,0)/d2.length) + 1e-6;
-    const adv = diffs.map(Math.abs).reduce((a,b)=>a+b,0)/diffs.length;
-    shock = Math.min(1, adv / (nu * _Φ));
-  }
-
-  const risk = (1-stability)*0.5 + patterns*0.3 + shock*0.2;
-
-  let level, horizon;
-  if      (risk < 0.3) { level='NORMAL';   horizon=60; }
-  else if (risk < 0.5) { level='ELEVATED'; horizon=30; }
-  else if (risk < 0.7) { level='HIGH';     horizon=15; }
-  else if (risk < 0.8) { level='SEVERE';   horizon=5;  }
-  else                 { level='CRITICAL'; horizon=2;  }
-
-  const rocof = freqHistory.length >= 2
-    ? (freqHistory[freqHistory.length-1] - freqHistory[freqHistory.length-2]) / 5
-    : 0;
-
-  return { level, horizon, stability, shock, risk, rocof,
-           resilience: Math.round(stability*100) };
-}
-
-function stdDev(arr) {
-  const m = arr.reduce((a,b)=>a+b,0)/arr.length;
-  return Math.sqrt(arr.map(x=>(x-m)**2).reduce((a,b)=>a+b,0)/arr.length);
-}
-
-
-// ══════════════════════════════════════════════════
-//  SIMULATION STATE
-// ══════════════════════════════════════════════════
-let currentScenario = SCENARIOS.spain2025;
-let scenarioKey = 'spain2025';
-let scenarioData = [];
+// ==================== SIMULATION STATE ====================
+let currentScenario = 'spain';
+let scenarioData = [...SCENARIOS.spain.data];
 let freqHistory = [];
 let currentStep = 0;
 let playing = false;
 let speed = 1;
 let tickTimer = null;
 let analysisCount = 0;
-let firstWarningStep = null;
-let blackoutTriggered = false;
-let predictionAtBlackout = null;
+let chart = null;
 
-const TICK_BASE = 1000; // ms
-
-
-// ══════════════════════════════════════════════════
-//  CHART
-// ══════════════════════════════════════════════════
-let chart;
-const MAX_CHART_POINTS = 80;
-
-const bandPlugin = {
-  id: 'bands',
-  beforeDraw(c) {
-    const {ctx, chartArea:ca, scales:{y}} = c;
-    if (!ca) return;
-    const nominal = currentScenario.nominal;
-    const isUS = nominal > 55;
-    // EU bands
-    const bands = isUS
-      ? [ [58.0, 62.0,'rgba(0,200,80,.07)'],  [57.0,58.0,'rgba(255,200,0,.10)'],
-          [56.0,57.0,'rgba(255,100,0,.13)'],   [54.0,56.0,'rgba(255,30,0,.16)'],
-          [0, 54.0,'rgba(120,0,0,.20)'] ]
-      : [ [49.8, 51.0,'rgba(0,200,80,.07)'],  [49.2,49.8,'rgba(255,200,0,.10)'],
-          [48.5,49.2,'rgba(255,100,0,.13)'],   [47.5,48.5,'rgba(255,30,0,.16)'],
-          [0,   47.5,'rgba(120,0,0,.20)'] ];
-    bands.forEach(([min,max,col])=>{
-      const yMin = Math.min(y.getPixelForValue(min), y.getPixelForValue(max));
-      const yMax = Math.max(y.getPixelForValue(min), y.getPixelForValue(max));
-      ctx.fillStyle = col;
-      ctx.fillRect(ca.left, yMin, ca.right-ca.left, yMax-yMin);
-    });
-    // Draw threshold lines
-    const lines = isUS
-      ? [[59.5,'rgba(255,200,0,.5)'],[59.0,'rgba(255,100,0,.6)'],[58.5,'rgba(255,30,0,.7)']]
-      : [[49.8,'rgba(255,200,0,.5)'],[49.2,'rgba(255,100,0,.6)'],[47.5,'rgba(255,30,0,.7)']];
-    lines.forEach(([hz,col])=>{
-      const py = y.getPixelForValue(hz);
-      ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
-      ctx.beginPath(); ctx.moveTo(ca.left,py); ctx.lineTo(ca.right,py); ctx.stroke();
-      ctx.setLineDash([]);
-    });
-  }
-};
-
+// ==================== CHART ====================
 function initChart() {
   const ctx = document.getElementById('freqChart').getContext('2d');
   chart = new Chart(ctx, {
     type: 'line',
-    plugins: [bandPlugin],
     data: {
       labels: [],
       datasets: [{
@@ -806,533 +429,308 @@ function initChart() {
         backgroundColor: 'rgba(0,170,255,.05)',
         borderWidth: 2.5,
         pointRadius: 0,
-        pointHoverRadius: 4,
-        tension: 0.4,
-        fill: true,
+        tension: 0.3,
+        fill: true
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: true,
       animation: { duration: 0 },
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#0c1f38',
-          borderColor: '#1a3a5c',
-          borderWidth: 1,
-          callbacks: {
-            label: ctx => `${ctx.parsed.y.toFixed(4)} Hz`
-          }
-        }
-      },
+      plugins: { legend: { display: false } },
       scales: {
-        x: {
-          ticks: { color:'#4a6a8a', maxRotation:0, font:{size:10},
-            callback(v,i) { return i%4===0 ? this.getLabelForValue(v) : ''; } },
-          grid: { color:'rgba(26,58,92,.4)' }
-        },
-        y: {
-          ticks: { color:'#4a6a8a', font:{size:10},
-            callback: v => `${v.toFixed(1)} Hz` },
-          grid: { color:'rgba(26,58,92,.4)' },
-          min: null, max: null
-        }
+        x: { ticks: { color: '#4a6a8a', font: { size: 9 } }, grid: { color: 'rgba(26,58,92,.3)' } },
+        y: { ticks: { color: '#4a6a8a' }, grid: { color: 'rgba(26,58,92,.3)' }, min: 47, max: 51.5 }
       }
     }
   });
 }
 
-function updateChart(freq, level) {
-  const nominal = currentScenario.nominal;
-  const label = formatSimTime(currentStep * 5);
-  chart.data.labels.push(label);
+function updateChart(freq) {
+  if (!chart) return;
+  const nominal = SCENARIOS[currentScenario].nominal;
+  chart.options.scales.y.min = nominal > 55 ? 54 : 47;
+  chart.options.scales.y.max = nominal > 55 ? 62 : 51.5;
+  
+  chart.data.labels.push(formatTime(currentStep * 5));
   chart.data.datasets[0].data.push(freq > 5 ? freq : null);
-
-  if (chart.data.labels.length > MAX_CHART_POINTS) {
+  if (chart.data.labels.length > 60) {
     chart.data.labels.shift();
     chart.data.datasets[0].data.shift();
   }
-
-  const isUS = nominal > 55;
-  const yMin = isUS ? 54 : 47.0;
-  const yMax = isUS ? 61 : 51.2;
-  chart.options.scales.y.min = yMin;
-  chart.options.scales.y.max = yMax;
-
-  // Color the line by severity
-  const lineColors = {
-    'NORMAL':'#00aaff','ELEVATED':'#ffcc00','HIGH':'#ff8800',
-    'SEVERE':'#ff4400','CRITICAL':'#ff2200'
-  };
-  chart.data.datasets[0].borderColor = lineColors[level] || '#00aaff';
-
   chart.update('none');
 }
 
-
-// ══════════════════════════════════════════════════
-//  DISPLAY UPDATES
-// ══════════════════════════════════════════════════
-const RISK_CFG = {
-  NORMAL:   { cls:'risk-normal',   icon:'✅', badge:'NORMAL',   color:'var(--safe)',
-    explain:'The grid is stable. Frequency is within normal operating bounds. No action required.',
-    action:'Routine monitoring. No intervention needed.' },
-  ELEVATED: { cls:'risk-elevated', icon:'⚠️', badge:'ELEVATED', color:'var(--warn)',
-    explain:'Unusual frequency drift detected. GridGuard predicts potential instability within 30 minutes if the trend continues.',
-    action:'Alert standby generation units. Begin load monitoring. Notify shift supervisor.' },
-  HIGH:     { cls:'risk-high',     icon:'🔶', badge:'HIGH',     color:'var(--high)',
-    explain:'Frequency is declining faster than normal. A cascade failure is possible within 15 minutes. This is an operational emergency.',
-    action:'ACTIVATE spinning reserve immediately. Request emergency imports from neighbors. Prepare load-shedding schedules.' },
-  SEVERE:   { cls:'risk-severe',   icon:'🚨', badge:'SEVERE',   color:'var(--danger)',
-    explain:'Critical frequency drop. Automatic protection systems are approaching their trip thresholds. A blackout within 5 minutes is likely without intervention.',
-    action:'EXECUTE controlled load-shedding NOW. Disconnect non-critical zones. Emergency call to all generation operators.' },
-  CRITICAL: { cls:'risk-critical', icon:'💥', badge:'CRITICAL', color:'var(--crit)',
-    explain:'CASCADE IN PROGRESS. Frequency is in freefall. Relay protection systems are beginning to trip. Blackout is imminent.',
-    action:'EMERGENCY: Initiate grid islanding protocols. UFLS relays should activate automatically. Contact ENTSO-E emergency desk.' },
-};
-
-function updateDisplay(freq, result) {
-  if (!result) return;
-  const { level, horizon, stability, shock, rocof, resilience } = result;
-  const nominal = currentScenario.nominal;
-  const isBlackout = freq < 5;
-  const cfg = RISK_CFG[level] || RISK_CFG.NORMAL;
-  const deviation = ((freq - nominal)*1000).toFixed(0);
-
-  // Frequency display
-  const fv = document.getElementById('freqValue');
-  fv.textContent = isBlackout ? '0.000' : freq.toFixed(3);
-  const fColors = {'NORMAL':'var(--safe)','ELEVATED':'var(--warn)',
-    'HIGH':'var(--high)','SEVERE':'var(--danger)','CRITICAL':'var(--crit)'};
-  fv.style.color = isBlackout ? '#333' : (fColors[level]||'var(--safe)');
-
-  document.getElementById('freqDelta').textContent =
-    `Change: ${rocof >= 0 ? '+' : ''}${rocof.toFixed(4)} Hz/s`;
-  document.getElementById('nominalBadge').textContent =
-    `Nominal: ${nominal.toFixed(2)} Hz  |  Deviation: ${deviation} mHz`;
-
-  // RoCoF display
-  const rv = document.getElementById('rocofValue');
-  const absRocof = Math.abs(rocof);
-  rv.textContent = rocof.toFixed(4);
-  rv.style.color = absRocof > 1.0 ? 'var(--crit)' : absRocof > 0.5 ? 'var(--danger)'
-    : absRocof > 0.2 ? 'var(--high)' : absRocof > 0.05 ? 'var(--warn)' : 'var(--safe)';
-
-  // Risk badge
-  const badge = document.getElementById('riskBadge');
-  badge.className = 'risk-' + level.toLowerCase();
-  badge.textContent = isBlackout ? 'BLACKOUT' : cfg.badge;
-  if (isBlackout) badge.className = 'risk-blackout';
-  document.getElementById('riskExplain').textContent = isBlackout
-    ? 'Grid has collapsed. Power loss across the entire zone.' : cfg.explain;
-
-  // Prediction countdown
-  updateCountdown(level, horizon, isBlackout);
-
-  // Metrics
-  document.getElementById('mStability').textContent = resilience + ' %';
-  document.getElementById('mStability').style.color =
-    resilience > 80 ? 'var(--safe)' : resilience > 50 ? 'var(--warn)' : 'var(--danger)';
-  document.getElementById('mShock').textContent = (shock * 100).toFixed(1) + ' %';
-  document.getElementById('mShock').style.color =
-    shock < 0.3 ? 'var(--safe)' : shock < 0.6 ? 'var(--warn)' : 'var(--danger)';
-  document.getElementById('mDeviation').textContent = deviation + ' mHz';
-  document.getElementById('mCount').textContent = ++analysisCount;
-  document.getElementById('mProc').textContent = (Math.random()*150+80).toFixed(0) + ' µs';
-
-  // Action
-  document.getElementById('actionText').textContent = isBlackout
-    ? '⛔ Grid has collapsed. Initiate black-start procedures per emergency protocol.' : cfg.action;
-  document.getElementById('actionIcon').textContent = cfg.icon;
-
-  // Alert banner
-  updateAlertBanner(level, horizon, isBlackout, freq);
-
-  // Chart
-  updateChart(freq, level);
-
-  // Progress bar
-  const pct = Math.min(100, (currentStep / (scenarioData.length-1)) * 100);
-  document.getElementById('simBar').style.width = pct + '%';
-  const elapsed = currentStep * 5;
-  const remain  = Math.max(0, 600 - elapsed);
-  document.getElementById('simElapsed').textContent = 'Elapsed: ' + formatSimTime(elapsed);
-  document.getElementById('simRemain').textContent  = 'Remaining: ' + formatSimTime(remain);
-  document.getElementById('clockDisplay').textContent = formatSimTime(elapsed) + ' / 10:00';
-}
-
-function updateCountdown(level, horizon, isBlackout) {
-  const el = document.getElementById('predCountdown');
-  const sub = document.getElementById('predSub');
-  const fill = document.getElementById('predHorizonFill');
-
-  if (isBlackout) {
-    el.textContent = '00:00';
-    el.style.color = '#333';
-    sub.textContent = 'Grid has collapsed.';
-    fill.style.width = '0%';
-    fill.style.background = '#333';
-    return;
-  }
-
-  if (level === 'NORMAL') {
-    el.textContent = '60:00';
-    el.style.color = 'var(--dim)';
-    sub.textContent = 'Grid is stable. No imminent risk detected.';
-    fill.style.width = '100%';
-    fill.style.background = 'var(--safe)';
-    return;
-  }
-
-  const mins = horizon;
-  const mm = String(Math.floor(mins)).padStart(2,'0');
-  const ss = '00';
-  el.textContent = `${mm}:${ss}`;
-
-  const colors = {ELEVATED:'var(--warn)',HIGH:'var(--high)',SEVERE:'var(--danger)',CRITICAL:'var(--crit)'};
-  el.style.color = colors[level];
-
-  const pct = Math.min(100, (mins / 60) * 100);
-  fill.style.width = pct + '%';
-  fill.style.background = colors[level];
-
-  const msgs = {
-    ELEVATED: 'GridGuard predicts grid instability if the current trend continues.',
-    HIGH:     '⚠ Cascade failure predicted. Time for operators to intervene.',
-    SEVERE:   '🚨 BLACKOUT RISK — Immediate action required to prevent collapse.',
-    CRITICAL: '💥 GRID COLLAPSE IMMINENT — Emergency protocols must activate now.'
-  };
-  sub.textContent = msgs[level] || '';
-}
-
-let _bannerLevel = '';
-function updateAlertBanner(level, horizon, isBlackout, freq) {
-  const banner = document.getElementById('alertBanner');
-  if (level === 'NORMAL' && !isBlackout) {
-    banner.style.display = 'none';
-    _bannerLevel = '';
-    document.getElementById('topbar').style.marginTop = '0';
-    return;
-  }
-  banner.style.display = 'flex';
-  document.getElementById('topbar').style.marginTop = '48px';
-
-  const icons = {ELEVATED:'⚡',HIGH:'⚠️',SEVERE:'🚨',CRITICAL:'💥'};
-  const titles = {
-    ELEVATED: 'CAUTION — Grid frequency anomaly detected',
-    HIGH:     'WARNING — Frequency instability. Cascade risk rising',
-    SEVERE:   'ALERT — Blackout risk. Immediate operator action required',
-    CRITICAL: 'EMERGENCY — Grid collapse imminent. All protocols activate NOW'
-  };
-  const actions = {
-    ELEVATED: 'Alert standby units. Monitor.',
-    HIGH:     'Activate spinning reserve. Request imports.',
-    SEVERE:   'Execute load shedding NOW.',
-    CRITICAL: 'Initiate islanding. UFLS active.'
-  };
-  const borderColors = {ELEVATED:'var(--warn)',HIGH:'var(--high)',SEVERE:'var(--danger)',CRITICAL:'var(--crit)'};
-
-  if (isBlackout) {
-    banner.className = 'blackout';
-    document.getElementById('alertTitle').textContent = '⛔ BLACKOUT — Grid has collapsed. Frequency: 0.00 Hz';
-    document.getElementById('alertSub').textContent = 'Power loss across entire zone. Black-start procedures required.';
-    document.getElementById('alertCountdown').textContent = '00:00';
-    document.getElementById('alertAction').textContent = 'Initiate black-start protocol.';
-    return;
-  }
-
-  banner.className = level.toLowerCase();
-  document.getElementById('alertIcon').textContent = icons[level]||'⚡';
-  document.getElementById('alertTitle').textContent = titles[level]||'';
-  document.getElementById('alertSub').textContent =
-    `Current frequency: ${freq.toFixed(3)} Hz  |  GridGuard predicts event in ≤${horizon} minutes`;
-  document.getElementById('alertAction').textContent = actions[level]||'';
-  document.getElementById('alertAction').style.borderColor = borderColors[level]||'var(--warn)';
-
-  const mm = String(horizon).padStart(2,'0');
-  document.getElementById('alertCountdown').textContent = `${mm}:00`;
-
-  if (level !== _bannerLevel && (level === 'HIGH' || level === 'SEVERE' || level === 'CRITICAL')) {
-    addLog(`🚨 Risk escalated to ${level} — predicted blackout in ${horizon} min`, 'danger');
-    if (firstWarningStep === null) {
-      firstWarningStep = currentStep;
-      predictionAtBlackout = horizon;
-    }
-  }
-  _bannerLevel = level;
-}
-
-
-// ══════════════════════════════════════════════════
-//  EVENT LOG
-// ══════════════════════════════════════════════════
-function addLog(msg, type='info') {
-  const ul = document.getElementById('logList');
-  const li = document.createElement('li');
-  li.innerHTML = `<span class="log-time">${formatSimTime(currentStep*5)}</span>
-    <span class="log-msg log-${type}">${msg}</span>`;
-  ul.insertBefore(li, ul.firstChild);
-  while (ul.children.length > 20) ul.removeChild(ul.lastChild);
-}
-
-
-// ══════════════════════════════════════════════════
-//  SIMULATION ENGINE
-// ══════════════════════════════════════════════════
-function tick() {
+// ==================== UI UPDATE ====================
+function updateAll() {
   if (currentStep >= scenarioData.length) {
-    triggerBlackout();
+    if (playing) triggerBlackout();
     return;
   }
+  
   const freq = scenarioData[currentStep];
   freqHistory.push(freq);
-  if (freqHistory.length > 30) freqHistory.shift();
-
-  const result = ggAnalyze(freqHistory);
-  updateDisplay(freq, result);
-
-  if (freq < 5 && !blackoutTriggered) {
-    triggerBlackout();
-    return;
+  if (freqHistory.length > 40) freqHistory.shift();
+  
+  const result = analyzeFrequency(freqHistory);
+  const nominal = SCENARIOS[currentScenario].nominal;
+  const deviation = ((freq - nominal) * 1000).toFixed(0);
+  
+  // Frequency display
+  const freqEl = document.getElementById('freqValue');
+  freqEl.textContent = freq.toFixed(3);
+  const colorMap = { NORMAL: '#00dd66', ELEVATED: '#ffc800', HIGH: '#ff8800', SEVERE: '#ff3300', CRITICAL: '#dd0000' };
+  freqEl.style.color = colorMap[result.level] || '#00dd66';
+  document.getElementById('freqDelta').textContent = `Change: ${result.rocof >= 0 ? '+' : ''}${result.rocof.toFixed(4)} Hz/s`;
+  document.getElementById('rocofValue').textContent = result.rocof.toFixed(4);
+  document.getElementById('rocofValue').style.color = Math.abs(result.rocof) > 0.5 ? '#ff3300' : '#00dd66';
+  document.getElementById('nominalInfo').textContent = `Nominal: ${nominal.toFixed(2)} Hz | Dev: ${deviation} mHz`;
+  
+  // Risk badge
+  const badge = document.getElementById('riskBadge');
+  badge.className = `risk-badge risk-${result.level.toLowerCase()}`;
+  badge.textContent = result.level;
+  
+  // Countdown
+  const predEl = document.getElementById('predCountdown');
+  if (result.level === 'NORMAL') {
+    predEl.textContent = '60:00';
+    predEl.style.color = '#4a6a8a';
+    document.getElementById('predSub').textContent = 'Grid is stable';
+  } else {
+    predEl.textContent = `${result.horizon.toString().padStart(2,'0')}:00`;
+    predEl.style.color = colorMap[result.level];
+    document.getElementById('predSub').textContent = `Blackout risk in ${result.horizon} minutes`;
   }
-
-  currentStep++;
+  
+  // Metrics
+  document.getElementById('mStability').textContent = (result.stability * 100).toFixed(1) + '%';
+  document.getElementById('mShock').textContent = (result.shock * 100).toFixed(1) + '%';
+  document.getElementById('mDeviation').textContent = deviation + ' mHz';
+  document.getElementById('mCount').textContent = ++analysisCount;
+  document.getElementById('mProc').textContent = Math.floor(Math.random() * 100 + 80) + ' µs';
+  
+  // Operator guidance
+  const guidance = {
+    NORMAL: 'Routine monitoring. Grid stable.',
+    ELEVATED: 'Alert standby generation. Monitor trends.',
+    HIGH: 'Activate spinning reserve immediately!',
+    SEVERE: 'Execute load shedding NOW!',
+    CRITICAL: 'EMERGENCY - Grid collapse imminent!'
+  };
+  document.getElementById('actionText').textContent = guidance[result.level];
+  
+  // Progress
+  const pct = (currentStep / (scenarioData.length - 1)) * 100;
+  document.getElementById('simFill').style.width = pct + '%';
+  document.getElementById('simElapsed').textContent = formatTime(currentStep * 5);
+  document.getElementById('clockDisplay').textContent = formatTime(currentStep * 5);
+  
+  // Chart
+  updateChart(freq);
+  
+  // Log on level change
+  if (result.level !== 'NORMAL' && window._lastLevel !== result.level) {
+    addLog(`⚠️ Risk escalated to ${result.level} - ${result.horizon} min to event`, 'warn');
+    window._lastLevel = result.level;
+  }
+  
+  // Check blackout
+  if (freq < 48 || (freq < 49 && result.level === 'CRITICAL')) {
+    triggerBlackout();
+  }
 }
 
 function triggerBlackout() {
-  if (blackoutTriggered) return;
-  blackoutTriggered = true;
-  clearInterval(tickTimer);
+  if (window._blackoutTriggered) return;
+  window._blackoutTriggered = true;
   playing = false;
-
-  const predMin = predictionAtBlackout || 2;
-  const predStep = firstWarningStep || 0;
-  const actualWarnSec = Math.max(0, (currentStep - predStep) * 5);
-
-  addLog('⛔ BLACKOUT — Grid frequency: 0.00 Hz', 'danger');
-
-  // Show overlay after short delay
+  if (tickTimer) clearInterval(tickTimer);
+  addLog('⛔ BLACKOUT - Grid frequency collapsed', 'danger');
   setTimeout(() => {
-    const overlay = document.getElementById('blackoutOverlay');
-    document.getElementById('boPredTime').textContent =
-      `${Math.floor(actualWarnSec/60)}m ${actualWarnSec%60}s`;
-    document.getElementById('boStats').textContent =
-      `Scenario: ${currentScenario.name} | GridGuard first alarm: ${formatSimTime(predStep*5)} into scenario`;
-    overlay.classList.add('show');
-  }, 1200);
+    document.getElementById('blackoutOverlay').classList.add('show');
+    const predTime = Math.floor(currentStep * 5 / 60);
+    document.getElementById('boPredTime').textContent = `${predTime} minutes`;
+  }, 500);
 }
 
 function closeBlackout() {
   document.getElementById('blackoutOverlay').classList.remove('show');
 }
 
+function addLog(msg, type = 'info') {
+  const ul = document.getElementById('logList');
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="log-time">${formatTime(currentStep * 5)}</span><span class="log-${type}">${msg}</span>`;
+  ul.insertBefore(li, ul.firstChild);
+  while (ul.children.length > 15) ul.removeChild(ul.lastChild);
+}
 
-// ══════════════════════════════════════════════════
-//  CONTROLS
-// ══════════════════════════════════════════════════
+// ==================== CONTROLS ====================
 function simPlay() {
   if (playing) return;
-  if (blackoutTriggered) simStop();
   playing = true;
-  document.getElementById('btnPlay').classList.add('active');
-  document.getElementById('btnPause').classList.remove('active');
+  if (tickTimer) clearInterval(tickTimer);
+  tickTimer = setInterval(() => {
+    if (playing && currentStep < scenarioData.length - 1) {
+      currentStep++;
+      updateAll();
+    } else if (currentStep >= scenarioData.length - 1) {
+      simStop();
+    }
+  }, 300 / speed);
   addLog('▶ Simulation started', 'info');
-  clearInterval(tickTimer);
-  tickTimer = setInterval(tick, TICK_BASE / speed);
 }
 
 function simPause() {
   playing = false;
-  clearInterval(tickTimer);
-  document.getElementById('btnPause').classList.add('active');
-  document.getElementById('btnPlay').classList.remove('active');
+  if (tickTimer) clearInterval(tickTimer);
   addLog('⏸ Paused', 'info');
 }
 
 function simStop() {
   playing = false;
-  clearInterval(tickTimer);
+  if (tickTimer) clearInterval(tickTimer);
   currentStep = 0;
   freqHistory = [];
   analysisCount = 0;
-  firstWarningStep = null;
-  predictionAtBlackout = null;
-  blackoutTriggered = false;
-  _bannerLevel = '';
-  document.getElementById('alertBanner').style.display = 'none';
-  document.getElementById('topbar').style.marginTop = '0';
-  document.getElementById('btnPlay').classList.remove('active');
-  document.getElementById('btnPause').classList.remove('active');
-  // Reset chart
-  chart.data.labels = [];
-  chart.data.datasets[0].data = [];
-  chart.update('none');
-  // Reset displays
-  document.getElementById('freqValue').textContent = '--.-';
-  document.getElementById('rocofValue').textContent = '0.000';
-  document.getElementById('riskBadge').className = 'risk-normal';
+  window._lastLevel = null;
+  window._blackoutTriggered = false;
+  document.getElementById('blackoutOverlay').classList.remove('show');
+  
+  if (chart) {
+    chart.data.labels = [];
+    chart.data.datasets[0].data = [];
+    chart.update();
+  }
+  
+  const firstFreq = scenarioData[0];
+  document.getElementById('freqValue').textContent = firstFreq ? firstFreq.toFixed(3) : '--.--';
+  document.getElementById('riskBadge').className = 'risk-badge risk-normal';
   document.getElementById('riskBadge').textContent = 'STANDBY';
   document.getElementById('predCountdown').textContent = '--:--';
-  document.getElementById('predCountdown').style.color = 'var(--dim)';
-  document.getElementById('simBar').style.width = '0%';
+  document.getElementById('simFill').style.width = '0%';
+  document.getElementById('simElapsed').textContent = '0:00';
+  document.getElementById('clockDisplay').textContent = '0:00';
   addLog('⏹ Reset', 'info');
 }
 
 function simSkip() {
-  const skip = Math.floor(12 / speed) || 1; // ~1 real minute of data
+  const skip = Math.floor(12 / speed);
   currentStep = Math.min(currentStep + skip, scenarioData.length - 2);
-  addLog(`⏩ Skipped to ${formatSimTime(currentStep*5)}`, 'info');
+  addLog(`⏩ Skipped to ${formatTime(currentStep * 5)}`, 'info');
+  updateAll();
 }
 
 function setSpeed(s) {
   speed = s;
-  ['sp1','sp2','sp5','sp10'].forEach(id => document.getElementById(id).classList.remove('active'));
-  document.getElementById('sp'+s).classList.add('active');
+  [1,2,5,10].forEach(v => document.getElementById(`sp${v}`).classList.toggle('active', v === s));
   if (playing) {
-    clearInterval(tickTimer);
-    tickTimer = setInterval(tick, TICK_BASE / speed);
+    if (tickTimer) clearInterval(tickTimer);
+    tickTimer = setInterval(() => {
+      if (playing && currentStep < scenarioData.length - 1) {
+        currentStep++;
+        updateAll();
+      }
+    }, 300 / speed);
   }
-  addLog(`Speed set to ${s}×`, 'info');
 }
 
-
-// ══════════════════════════════════════════════════
-//  SCENARIO LOADING
-// ══════════════════════════════════════════════════
+// ==================== SCENARIO LOADING ====================
 function loadScenario(key) {
   simStop();
-  currentScenario = SCENARIOS[key];
-  scenarioKey = key;
-  scenarioData = buildScenarioData(currentScenario);
-
-  // Active button
-  document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('btn-'+key).classList.add('active');
-
-  // Update info
-  document.getElementById('scenarioLabel').textContent = currentScenario.name;
-  document.getElementById('scenarioTitle').textContent =
-    currentScenario.name + ' — ' + currentScenario.date;
-  document.getElementById('scenarioDesc').textContent = currentScenario.desc;
-
-  const statsEl = document.getElementById('scenarioStats');
-  statsEl.innerHTML = (currentScenario.stats||[])
-    .map(s=>`<div class="sc-stat"><strong>${s.v}</strong><br>${s.k}</div>`)
-    .join('');
-
-  // Update threshold guide labels
-  const isUS = currentScenario.nominal > 55;
-  const threshBar = document.getElementById('threshBar');
-  threshBar.innerHTML = isUS
-    ? `<div class="th-seg" style="background:rgba(0,200,80,.18);color:#00cc66;flex:2">SAFE<br>59.5–60.5</div>
-       <div class="th-seg" style="background:rgba(255,200,0,.18);color:#ffcc00">⚠ 59.0</div>
-       <div class="th-seg" style="background:rgba(255,100,0,.18);color:#ff8800">⚠ 58.5</div>
-       <div class="th-seg" style="background:rgba(255,30,0,.20);color:#ff4444">🚨 58.0</div>
-       <div class="th-seg" style="background:rgba(100,0,0,.25);color:#994444">BLACKOUT</div>`
-    : `<div class="th-seg" style="background:rgba(0,200,80,.18);color:#00cc66;flex:2">SAFE<br>49.8–50.2</div>
-       <div class="th-seg" style="background:rgba(255,200,0,.18);color:#ffcc00">⚠ 49.2</div>
-       <div class="th-seg" style="background:rgba(255,100,0,.18);color:#ff8800">⚠ 48.5</div>
-       <div class="th-seg" style="background:rgba(255,30,0,.20);color:#ff4444">🚨 47.5</div>
-       <div class="th-seg" style="background:rgba(100,0,0,.25);color:#994444">BLACKOUT</div>`;
-
-  document.getElementById('nominalBadge').textContent =
-    `Nominal: ${currentScenario.nominal.toFixed(2)} Hz  |  Press ▶ to begin`;
-
-  addLog(`📂 Loaded: ${currentScenario.name}`, 'info');
+  currentScenario = key;
+  scenarioData = [...SCENARIOS[key].data];
+  currentStep = 0;
+  freqHistory = [];
+  analysisCount = 0;
+  window._lastLevel = null;
+  window._blackoutTriggered = false;
+  
+  document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`btn-${key}`).classList.add('active');
+  document.getElementById('scenarioLabel').textContent = SCENARIOS[key].name;
+  
+  const nominal = SCENARIOS[key].nominal;
+  document.getElementById('nominalInfo').textContent = `Nominal: ${nominal.toFixed(2)} Hz | Press Play`;
+  document.getElementById('freqValue').textContent = scenarioData[0].toFixed(3);
+  document.getElementById('riskBadge').className = 'risk-badge risk-normal';
+  document.getElementById('riskBadge').textContent = 'STANDBY';
+  
+  if (chart) {
+    chart.data.labels = [];
+    chart.data.datasets[0].data = [];
+    chart.update();
+  }
+  
+  addLog(`📂 Loaded: ${SCENARIOS[key].name}`, 'info');
 }
 
-
-// ══════════════════════════════════════════════════
-//  CSV / PASTE INPUT
-// ══════════════════════════════════════════════════
-function switchTab(t) {
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    const tabs = ['csv','paste'];
-    b.classList.toggle('active', tabs[i]===t);
+// ==================== CSV / PASTE ====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && tab === 'csv') || (i === 1 && tab === 'paste'));
   });
-  document.querySelectorAll('.tab-content').forEach(el => {
-    el.classList.toggle('active', el.id === 'tab-'+t);
-  });
+  document.getElementById('tab-csv').classList.toggle('active', tab === 'csv');
+  document.getElementById('tab-paste').classList.toggle('active', tab === 'paste');
 }
 
 function handleDrop(e) {
   e.preventDefault();
-  document.getElementById('dropZone').classList.remove('drag');
-  if (e.dataTransfer.files.length) handleCsvFile(e.dataTransfer.files[0]);
+  e.currentTarget.style.borderColor = '';
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 }
 
-function handleCsvFile(file) {
-  if (!file) return;
+function handleFile(file) {
   const reader = new FileReader();
-  reader.onload = e => {
-    const vals = parseFreqData(e.target.result);
-    if (vals.length < 4) {
-      document.getElementById('csvStatus').textContent = '❌ Need at least 4 frequency values';
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const values = text.split(/[,\n\r]+/).map(v => parseFloat(v.trim())).filter(v => !isNaN(v) && v > 45 && v < 65);
+    if (values.length < 5) {
+      document.getElementById('csvStatus').textContent = '❌ Need at least 5 frequency values';
       return;
     }
-    loadCustomData(vals, file.name);
+    loadCustomData(values);
   };
   reader.readAsText(file);
 }
 
-function loadPastedData() {
-  const raw = document.getElementById('pasteArea').value;
-  const vals = parseFreqData(raw);
-  if (vals.length < 4) {
-    alert('Need at least 4 frequency values (one per line or comma-separated).');
+function loadPasted() {
+  const text = document.getElementById('pasteArea').value;
+  const values = text.split(/[,\n\r\s]+/).map(v => parseFloat(v.trim())).filter(v => !isNaN(v) && v > 45 && v < 65);
+  if (values.length < 5) {
+    alert('Need at least 5 frequency values');
     return;
   }
-  loadCustomData(vals, 'Custom Data');
+  loadCustomData(values);
 }
 
-function parseFreqData(text) {
-  return text.split(/[\n,;\s]+/)
-    .map(s => parseFloat(s.trim()))
-    .filter(v => !isNaN(v) && v > 10 && v < 100);
-}
-
-function loadCustomData(vals, name) {
+function loadCustomData(values) {
   simStop();
-  // Extend or trim to 121 points
-  while (vals.length < 10) vals.push(...vals);
-  const nominal = vals[0] > 55 ? 60.0 : 50.0;
-  currentScenario = {
-    name: name, date: 'Custom Upload', nominal,
-    desc: `Custom frequency data loaded: ${vals.length} data points. Nominal: ${nominal} Hz.`,
-    stats: [{k:'Data points',v:vals.length},{k:'Nominal',v:nominal+' Hz'},
-            {k:'Min freq',v:Math.min(...vals).toFixed(3)+' Hz'},{k:'Max freq',v:Math.max(...vals).toFixed(3)+' Hz'}],
-    waypoints: null
-  };
-  scenarioData = vals.slice(0, 121);
-  while (scenarioData.length < 121) scenarioData.push(scenarioData[scenarioData.length-1]);
-
-  document.getElementById('scenarioLabel').textContent = name;
-  document.getElementById('scenarioTitle').textContent = name;
-  document.getElementById('scenarioDesc').textContent = currentScenario.desc;
-  document.getElementById('csvStatus').textContent = `✅ Loaded ${vals.length} values — press ▶ to analyze`;
-  addLog(`📤 Custom data loaded: ${name} (${vals.length} pts)`, 'info');
+  while (values.length < 60) values.push(...values.slice(-5));
+  scenarioData = values.slice(0, 121);
+  const nominal = scenarioData[0] > 55 ? 60 : 50;
+  document.getElementById('nominalInfo').textContent = `Custom: ${scenarioData.length} points | Nominal ~${nominal} Hz`;
+  document.getElementById('scenarioLabel').textContent = 'CUSTOM DATA';
+  currentStep = 0;
+  addLog(`📤 Loaded ${scenarioData.length} custom data points`, 'info');
+  document.getElementById('csvStatus').textContent = `✅ Loaded ${scenarioData.length} values`;
+  updateAll();
 }
 
-
-// ══════════════════════════════════════════════════
-//  UTILITY
-// ══════════════════════════════════════════════════
-function formatSimTime(secs) {
-  const m = Math.floor(secs/60);
-  const s = Math.floor(secs%60);
-  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+// ==================== UTILITIES ====================
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-
-// ══════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════
+// ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
   initChart();
-  loadScenario('spain2025');
-  addLog('GridGuard v3.0 initialized', 'ok');
-  addLog('Select a scenario and press ▶ to begin', 'info');
+  loadScenario('spain');
+  addLog('✅ GridGuard Toy Demo ready', 'ok');
+  addLog('Select scenario and press Play', 'info');
 });
 </script>
 </body>
