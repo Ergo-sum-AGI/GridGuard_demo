@@ -148,7 +148,7 @@ canvas{width:100%!important;height:100%!important}
 
 <div class="disclaimer">
   ⚠️ TOY DEMO: Simplified browser demonstration. Real proprietary engine not included.
-  <a href="#" target="_blank">Learn more →</a>
+  <a href="https://github.com/Ergo-sum-AGI/GridGuard_demo/blob/main/GridGuard_demo.zip" target="_blank">Download full prototype demo (password protected) →</a>
 </div>
 
 <div class="header">
@@ -292,40 +292,52 @@ canvas{width:100%!important;height:100%!important}
 const PHI = (1 + Math.sqrt(5)) / 2;
 
 function analyzeFrequency(freqHistory) {
-  const data = freqHistory.slice(-12);
+  const data = freqHistory.slice(-16);
   if (data.length < 4) {
     return { level: 'NORMAL', horizon: 60, stability: 0.92, shock: 0.05, rocof: 0 };
   }
-  
-  // Calculate stability from variance
+
+  // Estimate nominal from first readings in history
+  const nominalEst = freqHistory[0] > 55 ? 60.0 : 50.0;
+  const currentFreq = data[data.length - 1];
+  const deviation = nominalEst - currentFreq;   // positive = freq too low
+
+  // Diffs and variance
   const diffs = [];
   for (let i = 1; i < data.length; i++) diffs.push(data[i] - data[i-1]);
   const meanDiff = diffs.reduce((a,b)=>a+b,0)/diffs.length;
-  const variance = diffs.reduce((sum, v) => sum + Math.pow(v - meanDiff, 2), 0) / diffs.length;
-  const stability = Math.max(0.1, 1 - Math.sqrt(variance) * 12);
-  
-  // Shock risk from acceleration
+  const variance = diffs.reduce((sum,v) => sum + Math.pow(v - meanDiff, 2), 0) / diffs.length;
+  const stability = Math.max(0.05, 1 - Math.sqrt(variance) * 12);
+
+  // RoCoF (Hz per second, 5s sample interval)
+  const rocof = (data[data.length-1] - data[data.length-2]) / 5;
+
+  // Shock from acceleration
   let shock = 0;
   if (diffs.length >= 2) {
     const accel = [];
     for (let i = 1; i < diffs.length; i++) accel.push(diffs[i] - diffs[i-1]);
     const avgAccel = Math.abs(accel.reduce((a,b)=>a+b,0)/accel.length);
-    const avgDiff = Math.abs(meanDiff);
-    shock = Math.min(0.95, (avgDiff + avgAccel * 2) / 0.5);
+    shock = Math.min(0.95, (Math.abs(meanDiff) + avgAccel * 2) / 0.5);
   }
-  
-  // Risk score
-  const risk = (1 - stability) * 0.6 + shock * 0.4;
-  
+
+  // Deviation risk: linear decline fools variance — catch it here directly
+  // Each 0.1 Hz below nominal adds significant risk
+  const devRisk = Math.min(1.0, Math.max(0, deviation / 2.5));
+
+  // RoCoF risk: drops faster than 0.1 Hz/s are dangerous
+  const rocofRisk = Math.min(1.0, Math.max(0, -rocof / 0.3));
+
+  // Combined risk — deviation and RoCoF can each independently force escalation
+  const risk = (1 - stability) * 0.35 + shock * 0.25 + devRisk * 0.25 + rocofRisk * 0.15;
+
   let level, horizon;
-  if (risk > 0.82) { level = 'CRITICAL'; horizon = 2; }
-  else if (risk > 0.72) { level = 'SEVERE'; horizon = 5; }
-  else if (risk > 0.58) { level = 'HIGH'; horizon = 15; }
-  else if (risk > 0.38) { level = 'ELEVATED'; horizon = 30; }
-  else { level = 'NORMAL'; horizon = 60; }
-  
-  const rocof = freqHistory.length >= 2 ? (freqHistory[freqHistory.length-1] - freqHistory[freqHistory.length-2]) / 5 : 0;
-  
+  if      (risk > 0.75 || deviation > 2.0 || rocof < -0.4) { level = 'CRITICAL'; horizon = 2;  }
+  else if (risk > 0.60 || deviation > 1.2 || rocof < -0.2) { level = 'SEVERE';   horizon = 5;  }
+  else if (risk > 0.45 || deviation > 0.5 || rocof < -0.08){ level = 'HIGH';     horizon = 15; }
+  else if (risk > 0.28 || deviation > 0.2)                  { level = 'ELEVATED'; horizon = 30; }
+  else                                                       { level = 'NORMAL';  horizon = 60; }
+
   return {
     level, horizon,
     stability: parseFloat(stability.toFixed(3)),
@@ -409,12 +421,20 @@ let currentScenario = 'spain';
 let scenarioData = [...SCENARIOS.spain.data];
 let freqHistory = [];
 let currentStep = 0;
-let blackoutStep = 0;   // index where freq first collapses below 5 Hz
+let blackoutStep = 0;   // step index where freq first drops below threshold
 let playing = false;
 let speed = 1;
 let tickTimer = null;
 let analysisCount = 0;
 let chart = null;
+
+function computeBlackoutStep(data) {
+  // Find first point where freq drops into the unrecoverable zone
+  const nominal = data[0] > 55 ? 60.0 : 50.0;
+  const threshold = nominal - 2.5;
+  const idx = data.findIndex(f => f < threshold);
+  return idx >= 0 ? idx : data.length - 1;
+}
 
 // ==================== CHART ====================
 function initChart() {
@@ -470,18 +490,10 @@ function updateAll() {
   }
   
   const freq = scenarioData[currentStep];
-
-  // Once freq collapses to near zero, freeze display and trigger blackout
-  if (freq < 5) {
-    triggerBlackout();
-    return;
-  }
-
   freqHistory.push(freq);
   if (freqHistory.length > 40) freqHistory.shift();
   
   const result = analyzeFrequency(freqHistory);
-  window._lastResult = result; // always save last valid result
   const nominal = SCENARIOS[currentScenario].nominal;
   const deviation = ((freq - nominal) * 1000).toFixed(0);
   
@@ -500,8 +512,9 @@ function updateAll() {
   badge.className = `risk-badge risk-${result.level.toLowerCase()}`;
   badge.textContent = result.level;
   
-  // Countdown — show actual seconds remaining to blackout in this scenario
+  // Countdown — real remaining time derived from scenario data
   const predEl = document.getElementById('predCountdown');
+  const colorMap2 = { ELEVATED:'#ffc800', HIGH:'#ff8800', SEVERE:'#ff3300', CRITICAL:'#dd0000' };
   if (result.level === 'NORMAL') {
     predEl.textContent = 'STABLE';
     predEl.style.color = '#4a6a8a';
@@ -510,11 +523,11 @@ function updateAll() {
     const remainSec = Math.max(0, (blackoutStep - currentStep) * 5);
     const rm = Math.floor(remainSec / 60);
     const rs = remainSec % 60;
-    const label = `${rm.toString().padStart(2,'0')}:${rs.toString().padStart(2,'0')}`;
-    predEl.textContent = label;
-    predEl.style.color = colorMap[result.level];
-    const urgency = { ELEVATED: 'Instability detected', HIGH: 'Cascade risk rising', SEVERE: 'Blackout risk — act now', CRITICAL: 'COLLAPSE IMMINENT' };
-    document.getElementById('predSub').textContent = `${urgency[result.level] || ''} — ${rm > 0 ? rm + ' min ' : ''}${rs} sec to blackout`;
+    predEl.textContent = `${rm.toString().padStart(2,'0')}:${rs.toString().padStart(2,'0')}`;
+    predEl.style.color = colorMap2[result.level] || '#ff3300';
+    const urgency = { ELEVATED:'Instability detected', HIGH:'Cascade risk rising', SEVERE:'Blackout risk — act now', CRITICAL:'COLLAPSE IMMINENT' };
+    document.getElementById('predSub').textContent =
+      `${urgency[result.level]} — ${rm > 0 ? rm+'m ' : ''}${rs}s to event`;
   }
   
   // Metrics
@@ -549,7 +562,11 @@ function updateAll() {
     window._lastLevel = result.level;
   }
   
-  // Blackout triggered above when freq < 5; nothing more needed here
+  // Trigger blackout when freq reaches the critical collapse zone
+  const nominalNow = SCENARIOS[currentScenario]?.nominal || 50.0;
+  if (freq < (nominalNow - 2.8) || currentStep >= blackoutStep) {
+    triggerBlackout();
+  }
 }
 
 function triggerBlackout() {
@@ -658,9 +675,7 @@ function loadScenario(key) {
   window._lastLevel = null;
   window._blackoutTriggered = false;
   
-  // Pre-compute the step index where frequency collapses
-  blackoutStep = scenarioData.findIndex(f => f < 5);
-  if (blackoutStep < 0) blackoutStep = scenarioData.length - 1;
+  blackoutStep = computeBlackoutStep(scenarioData);
 
   document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
   document.getElementById(`btn-${key}`).classList.add('active');
@@ -727,8 +742,6 @@ function loadCustomData(values) {
   const nominal = scenarioData[0] > 55 ? 60 : 50;
   document.getElementById('nominalInfo').textContent = `Custom: ${scenarioData.length} points | Nominal ~${nominal} Hz`;
   document.getElementById('scenarioLabel').textContent = 'CUSTOM DATA';
-  blackoutStep = scenarioData.findIndex(f => f < 5);
-  if (blackoutStep < 0) blackoutStep = scenarioData.length - 1;
   currentStep = 0;
   addLog(`📤 Loaded ${scenarioData.length} custom data points`, 'info');
   document.getElementById('csvStatus').textContent = `✅ Loaded ${scenarioData.length} values`;
